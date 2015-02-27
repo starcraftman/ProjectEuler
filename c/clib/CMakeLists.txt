@@ -1,0 +1,23 @@
+SET(CLIB_SOURCES
+    ${CLIB_SOURCES}
+    "${CMAKE_CURRENT_SOURCE_DIR}/bigInteger.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/dequeueInt.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/primeTest.c"
+)
+
+SET(CLIB_HEADERS
+    ${CLIB_HEADERS}
+    "${CMAKE_CURRENT_SOURCE_DIR}/bigInteger.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/dequeueInt.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/primeTest.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/general.h"
+)
+
+ADD_LIBRARY(
+    ${CLIB}
+    STATIC
+    ${CLIB_SOURCES}
+    ${CLIB_HEADERS}
+)
+
+TARGET_LINK_LIBRARIES(${CLIB} m)
