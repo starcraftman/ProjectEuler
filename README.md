@@ -1,4 +1,6 @@
 # ProjectEuler
 My Solutions -> https://projecteuler.net
 
-Likely to be a combination of C/C++ with perhaps some Java.
+1. Run `GetLibsI.py boost gtest`
+
+1. Enter either folder and use `build.sh` to build problems.

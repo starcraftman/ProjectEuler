@@ -12,8 +12,9 @@ usage() {
 }
 
 build() {
-  if [ "$(uname -s)" == "Linux" -a ! -d ./libs ]; then
-    ./GetLibs.py gtest boost
+  if [ "$(uname -s)" == "Linux" -a ! -d ./libs/lib ]; then
+    echo "Warning, libs doesn't exists. Run GetLibsI.py"
+    exit
   fi
 
   pushd "$BDIR"
@@ -35,10 +36,7 @@ for arg; do
       mkdir -p "$BDIR"
       touch "$BDIR/DUMMY"
       ;;
-    c)
-      build
-      ;;
-    *) # Default is to run
+    *) # Default
       build
       ;;
   esac
