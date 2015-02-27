@@ -35,7 +35,7 @@ bool is_palindrome2(int i) {
 
 bool is_palindrome(int i) {
 	int digit = 0;
-	dequeue *d = NULL;
+	dequeue_t *d = NULL;
 	node *start, *end;
 
 	d = dq_make_dequeue();

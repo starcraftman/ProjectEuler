@@ -21,40 +21,40 @@ typedef enum BOOL {
 typedef struct node node;
 typedef int node_type;
 
-struct node {
+typedef struct node {
 	node_type val;
 	node *next;
 	node *prev;
-};
+} node_t;
 
 typedef struct dequeue {
 	node *start;
 	node *end;
 	int size;
-} dequeue;
+} dequeue_t;
 
-int dq_get_size(dequeue *d);
+int dq_get_size(dequeue_t *d);
 
-CODES dq_add_end(dequeue *d, node *n);
+CODES dq_add_end(dequeue_t *d, node *n);
 
-CODES dq_add_start(dequeue *d, node *n);
+CODES dq_add_start(dequeue_t *d, node *n);
 
-node *dq_remove_end(dequeue *d);
+node *dq_remove_end(dequeue_t *d);
 
-node *dq_remove_start(dequeue *d);
+node *dq_remove_start(dequeue_t *d);
 
-dequeue *dq_make_dequeue();
+dequeue_t *dq_make_dequeue();
 
 node *dq_make_node(node_type i);
 
-node *dq_peek_start(dequeue *d);
+node *dq_peek_start(dequeue_t *d);
 
-node *dq_peek_end(dequeue *d);
+node *dq_peek_end(dequeue_t *d);
 
 void dq_free_node(node *n);
 
-void dq_free_dequeue(dequeue *d);
+void dq_free_dequeue(dequeue_t *d);
 
-bool dq_is_empty(dequeue *d);
+bool dq_is_empty(dequeue_t *d);
 
 #endif /* DEQUEUEINT_H_ */

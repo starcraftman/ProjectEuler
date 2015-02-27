@@ -4,11 +4,11 @@
 #include <stdlib.h>
 #include "dequeueInt.h"
 
-int dq_get_size(dequeue *d) {
+int dq_get_size(dequeue_t *d) {
 	return d->size;
 }
 
-CODES dq_add_end(dequeue *d, node *n) {
+CODES dq_add_end(dequeue_t *d, node_t *n) {
 	if (d->end == NULL) {
 		d->start = n;
 		d->end = n;
@@ -23,7 +23,7 @@ CODES dq_add_end(dequeue *d, node *n) {
 	return SUCESS;
 }
 
-CODES dq_add_start(dequeue *d, node *n) {
+CODES dq_add_start(dequeue_t *d, node_t *n) {
 	if (d->start == NULL) {
 		d->start = n;
 		d->end = n;
@@ -38,11 +38,11 @@ CODES dq_add_start(dequeue *d, node *n) {
 	return SUCESS;
 }
 
-node *dq_remove_end(dequeue *d) {
-	node *n = NULL;
+node_t *dq_remove_end(dequeue_t *d) {
+	node_t *n = NULL;
 	if (d->end == NULL)
 		return NULL;
-	else if (d->end == d->start) { // Only one node left.
+	else if (d->end == d->start) { // Only one node_t left.
 		n = d->end;
 		d->end = NULL;
 		d->start = NULL;
@@ -56,11 +56,11 @@ node *dq_remove_end(dequeue *d) {
 	return n;
 }
 
-node *dq_remove_start(dequeue *d) {
-	node *n = NULL;
+node_t *dq_remove_start(dequeue_t *d) {
+	node_t *n = NULL;
 	if (d->start == NULL)
 		return NULL;
-	else if (d->end == d->start) { // Only one node left.
+	else if (d->end == d->start) { // Only one node_t left.
 		n = d->start;
 		d->start = NULL;
 		d->end = NULL;
@@ -74,8 +74,8 @@ node *dq_remove_start(dequeue *d) {
 	return n;
 }
 
-dequeue *dq_make_dequeue() {
-	dequeue *q = malloc(sizeof(dequeue));
+dequeue_t *dq_make_dequeue() {
+	dequeue_t *q = (dequeue_t *)malloc(sizeof(dequeue_t));
 
 	q->size = 0;
 	q->start = NULL;
@@ -84,8 +84,8 @@ dequeue *dq_make_dequeue() {
 	return q;
 }
 
-node *dq_make_node(node_type i) {
-	node *n = malloc(sizeof(node));
+node_t *dq_make_node(node_type i) {
+	node_t *n = (node_t *)malloc(sizeof(node_t));
 
 	n->val = i;
 	n->next = NULL;
@@ -94,7 +94,7 @@ node *dq_make_node(node_type i) {
 	return n;
 }
 
-bool dq_is_empty(dequeue *d) {
+bool dq_is_empty(dequeue_t *d) {
 	if (d->end != d->start)
 		return FALSE;
 	else if (d->start == NULL)
@@ -103,20 +103,20 @@ bool dq_is_empty(dequeue *d) {
 	return FALSE;
 }
 
-node *dq_peek_start(dequeue *d) {
+node_t *dq_peek_start(dequeue_t *d) {
 	return d->start;
 }
 
-node *dq_peek_end(dequeue *d) {
+node_t *dq_peek_end(dequeue_t *d) {
 	return d->end;
 }
 
-void dq_free_node(node *n) {
+void dq_free_node(node_t *n) {
 	free(n);
 }
 
-void dq_free_dequeue(dequeue *d) {
-	node *n ;
+void dq_free_dequeue(dequeue_t *d) {
+	node_t *n ;
 
 	while ( (n = dq_remove_end(d)) != NULL)
 		dq_free_node(n);
