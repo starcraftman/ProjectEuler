@@ -1,5 +1,6 @@
 /**
  * Find first triangle number with over 500 divisors.
+ * Threaded version, have n threads maxing cores. Each tests a triangle.
  */
 /********************* Header Files ***********************/
 /* C++ Headers */
@@ -12,7 +13,8 @@
 /* C Headers */
 #include <cmath>
 
-//#include "gtest/gtest.h"
+#include "gtest/gtest.h"
+#include "boost/thread.hpp"
 
 /**************** Namespace Declarations ******************/
 using std::cin;
@@ -39,7 +41,7 @@ public:
         swap(first.t_number, second.t_number);
     }
 
-    long long next() {
+    long next() {
         this->t_number += t_add;
         this->t_add += 1;
         return this->t_number;
@@ -49,17 +51,18 @@ public:
         return this->t_add - 1;
     }
 
-    long long number() {
+    long number() {
         return this->t_number;
     }
 
 private:
     long t_add;
-    long long t_number;
+    long t_number;
+    boost::mutex lock;
 };
 
 /************** Global Vars & Functions *******************/
-void find_divisors(long long tval, std::vector<int> &v) {
+void find_divisors(long tval, std::vector<int> &v) {
     for (int i = 1; i <= tval; ++i) {
         if ((tval % i) == 0) {
             v.push_back(i);
