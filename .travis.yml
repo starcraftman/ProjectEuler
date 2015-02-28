@@ -1,0 +1,9 @@
+language: cpp
+compiler: 
+  - gcc
+
+before_script:
+  - ./GetLibsI.py boost gtest
+
+script:
+  - ./cpp/build.sh clean test
