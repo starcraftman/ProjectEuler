@@ -94,7 +94,8 @@ TEST(Euler012, TriangleGenerator) {
 }
 
 TEST(Euler012, FindDivisors) {
-    long triange = 25200;
+    long triangle = 25200;
+    ASSERT_EQ(triangle, 25200);
 }
 
 /* Notes:
