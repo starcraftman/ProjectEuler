@@ -91,11 +91,11 @@ int main(int argc, char **argv) {
 
     cout << "-------" << endl;
     // Print solution.
-    cout << "The number is " << tg.number() << "." << endl;
+    cout << "The triangle number " << tg.number() << " has " << v.size() << " divisors." << endl;
     cout << "The divisors are:" << endl;
     int line_so_far = 0;
     for (auto i : v) {
-        cout << i << " ";
+        cout << i << ",";
         line_so_far++;
         if ((line_so_far % 25) == 0) {
             cout << endl;

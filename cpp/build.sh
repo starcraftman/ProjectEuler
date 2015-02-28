@@ -36,8 +36,13 @@ for arg; do
       mkdir -p "$BDIR"
       touch "$BDIR/DUMMY"
       ;;
+    test)
+      build
+      "$BDIR/src/Euler012_thread_test"
+      ;;
     *) # Default
       build
+      "$BDIR/src/Euler012_thread" 50
       ;;
   esac
 done
