@@ -4,9 +4,8 @@ compiler:
   - gcc
 
 before_script:
-  - sudo apt-get update -y
-  #- sudo apt-get install -y libboost-dev libboost-date-time1.46-dev libboost-filesystem1.46-dev libboost-regex1.46-dev libboost-system1.46-dev libboost-thread1.46-dev
-  - ./GetLibsI.py boost
+  # Spams log, suppress output during build of boost
+  - bash ./bootstrap.sh 2>&1 >/dev/null
 
 script:
   # For now just cpp tests, retry
