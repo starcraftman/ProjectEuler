@@ -14,6 +14,7 @@ usage() {
 build() {
   if [ "$(uname -s)" == "Linux" -a ! -d ./libs/lib ]; then
     echo "Warning, libs doesn't exists. Run GetLibsI.py"
+    exit
   fi
 
   pushd "$BDIR"

@@ -10,7 +10,7 @@
 #include <vector>
 
 /* C Headers */
-#include <cmath>
+#include <cstdlib>
 
 //#include "gtest/gtest.h"
 
@@ -94,8 +94,8 @@ int main(int argc, char **argv) {
     cout << "The triangle number " << tg.number() << " has " << v.size() << " divisors." << endl;
     cout << "The divisors are:" << endl;
     int line_so_far = 0;
-    for (auto i : v) {
-        cout << i << ",";
+    for (std::vector<int>::const_iterator itr = v.begin(); itr != v.end(); ++itr) {
+        cout << *itr << ",";
         line_so_far++;
         if ((line_so_far % 25) == 0) {
             cout << endl;

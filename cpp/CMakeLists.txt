@@ -15,8 +15,8 @@ SET(BOOST_ROOT  "${CMAKE_SOURCE_DIR}/libs")
 SET(GTEST_ROOT  "${BOOST_ROOT}")
 SET(CXX_LIB    "my_cpp")
 
-#FIND_PACKAGE(Boost 1.46.0 REQUIRED chrono date_time filesystem regex system thread)
-#FIND_PACKAGE(GTest 1.7 REQUIRED)
+FIND_PACKAGE(Boost 1.46.0 REQUIRED chrono date_time filesystem regex system thread)
+FIND_PACKAGE(GTest 1.7 REQUIRED)
 FIND_PACKAGE(Threads REQUIRED)
 
 SET(SYS_LIBS

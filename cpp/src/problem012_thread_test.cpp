@@ -88,7 +88,7 @@ TEST(Euler012, TriangleGenerator) {
     TriangleGenerator tg;
     for (int i = 0; i < desired_index; ++i) {
         tg.next();
-    } 
+    }
 
     ASSERT_EQ(expected_triangle, tg.number());
 }
