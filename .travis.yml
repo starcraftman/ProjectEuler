@@ -5,7 +5,7 @@ compiler:
 
 before_script:
   # Spams log, suppress output during build of boost, around 20 mins
-  - bash ./bootstrap.sh >/dev/null
+  - bash ./bootstrap.sh
 
 script:
   # For now just cpp tests, retry
