@@ -87,7 +87,6 @@ int main(int argc, char **argv) {
         cout << "Triangle number " << tg.index() << " is " << tg.number() << "." << endl;
         v.clear();
         find_divisors(tg.number(), v);
-        cout << "Last divisor is " << v.back() << endl;
         if (v.size() > divisors) {
             break;
         }
