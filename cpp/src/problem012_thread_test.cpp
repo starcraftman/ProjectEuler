@@ -85,7 +85,7 @@ using std::string;
 TEST(Euler012, TriangleGenerator) {
     int desired_index = 50;
     long expected_triangle = 1275;
-    TriangleGenerator tg;
+    e012::TriangleGenerator tg;
     for (int i = 0; i < desired_index; ++i) {
         tg.next();
     }
@@ -94,8 +94,19 @@ TEST(Euler012, TriangleGenerator) {
 }
 
 TEST(Euler012, FindDivisors) {
-    long triangle = 25200;
-    ASSERT_EQ(triangle, 25200);
+    long triangle = 28;
+    std::vector<int> expect, actual;
+
+    int ex_a[] = {1, 2, 4, 7, 14, 28};
+    for (int i = 0; i != sizeof(ex_a)/sizeof(int); ++i) {
+        expect.push_back(ex_a[i]);
+    }
+
+    e012::find_divisors(triangle, actual);
+    std::vector<int>::const_iterator e_itr = expect.begin();
+    for (std::vector<int>::const_iterator a_itr = actual.begin(); a_itr != actual.end(); ++e_itr, ++a_itr) {
+        ASSERT_EQ(*a_itr, *e_itr);
+    }
 }
 
 /* Notes:

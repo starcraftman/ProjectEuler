@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
     ++argv;
     unsigned long divisors = std::atol(*argv);
 
-    TriangleGenerator tg;
+    e012::TriangleGenerator tg;
     std::vector<int> v;
     boost::mutex mtx;
     while (true) {
@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
         mtx.unlock();
         cout << "Triangle number is " << tval << "." << endl;
         v.clear();
-        find_divisors(tg.number(), v);
+        e012::find_divisors(tg.number(), v);
         if (v.size() > divisors) {
             break;
         }

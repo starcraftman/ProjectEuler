@@ -56,6 +56,7 @@
 #include "boost/thread.hpp"
 
 /************** Class & Func Declarations *****************/
+namespace e012 {
 class TriangleGenerator {
 public:
     TriangleGenerator() {
@@ -121,5 +122,7 @@ void find_divisors(long tval, std::vector<int> &v) {
         }
     }
 }
+}
 
 #endif /* _PROBLEM012-THREAD_HPP_ */
+
