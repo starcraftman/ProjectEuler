@@ -33,6 +33,8 @@ FLAGS = [
     '-isystem',
     '/usr/local/include',
     '-I',
+    'libs',
+    '-I',
     'clib',
     '-I',
     'src',
