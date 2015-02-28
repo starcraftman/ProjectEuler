@@ -1,5 +1,4 @@
-# ProjectEuler
-[![Build Status][travis-img]][travis]
+# ProjectEuler [![Build Status][travis-img]][travis]
 
 My Solutions to https://projecteuler.net
 This is spoilers if you plan on doing.
