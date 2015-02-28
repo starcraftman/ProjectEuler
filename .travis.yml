@@ -4,7 +4,7 @@ compiler:
 
 before_script:
   - sudo apt-get update -y
-  - aptitude search boost
+  - apt-cache search boost
   - ./GetLibsI.py gtest
 
 script:
