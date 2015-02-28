@@ -4,9 +4,9 @@ compiler:
 
 before_script:
   - sudo apt-get update -y
-  - sudo apt-get install -y libboost-all-dev
+  - aptitude search boost
   - ./GetLibsI.py gtest
 
 script:
   # For now just cpp tests, retry
-  - ./cpp/build.sh clean test
+  #- ./cpp/build.sh clean test
