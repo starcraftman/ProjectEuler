@@ -6,4 +6,5 @@ before_script:
   - ./GetLibsI.py boost gtest
 
 script:
+  # For now just cpp tests
   - ./cpp/build.sh clean test
