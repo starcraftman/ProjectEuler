@@ -3,7 +3,9 @@ compiler:
   - gcc
 
 before_script:
-  - ./GetLibsI.py boost gtest
+  - sudo apt-get update -y
+  - sudo apt-get install -y libboost-all-dev
+  - ./GetLibsI.py gtest
 
 script:
   # For now just cpp tests, retry
