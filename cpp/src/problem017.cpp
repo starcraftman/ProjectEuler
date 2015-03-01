@@ -140,7 +140,7 @@ private:
 
 
 /************** Global Vars & Functions *******************/
-int count_chars(std::string &input) {
+int count_chars(std::string input) {
     int count = 0;
 
     for (std::string::const_iterator itr = input.begin(); itr != input.end(); ++itr) {
@@ -200,12 +200,13 @@ TEST(Euler017, TestUnderTwenty) {
 TEST(Euler017, FinalAnswer) {
     NumToWord gen;
     gen.init_from_file();
-    long count;
+    long count = 0;
     for (int i = 1; i < 1001; ++i) {
         std::string words = gen.phrase(i);
         count += count_chars(words);
     }
 
+    ASSERT_EQ(count, 21124);
     cout << "The number of characters is: " << count << endl;
 }
 
