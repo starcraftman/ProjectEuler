@@ -9,52 +9,10 @@ NOTE: Do not count spaces or hyphens. For example, 342 (three hundred and forty-
 /* C++ Headers */
 #include <iostream> /* Input/output objects. */
 #include <fstream> /* File operations. */
-//#include <sstream> /* String stream. */
 #include <string> /* C++ String class. */
-//#include <exception> /* Top level exception header. */
-//#include <stdexcept> /* Some useful common exceptions */
-//#include <new> /* Defines bad_malloc exception, new functions. */
-//#include <memory> /* std smart pointers like unique_ptr */
-//#include <typeinfo> /* Casting header. */
-//#include <limits> /* Inspect properties, numeric_limits<int> iLimit; */
-//#include <numeric> /* Math accumulators & other ops*/
-//#include <functional> /* Function declarations & std::bind */
-
-/* C++11 Only*/
-//#include <chrono> /* std::chrono contains timing for threads */
-//#include <initializer_list> /* Allows class to take list like {1,2} */
-//#include <random> /* Random c++ version */
-//#include <regex>
-//#include <thread>
-//#include <atomic>
-//#include <condition_variable>
-//#include <mutex>
-
-/* STL Headers */
-//#include <vector>
-//#include <list>
-//#include <deque>
-//#include <stack>
-//#include <queue>
-//#include <priority_queue>
-//#include <set> // multiset for multiple keys allowed.
-//#include <map> // multimap for multiple keys allowed.
-//#include <bitset>
-//#include <utility> // Has pair for map, std::swap
-//#include <algorithm>
-//#include <iterator> // Contains back_inserter function and like.
 
 /* C Headers */
-//#include <cstdio>
-//#include <cstring>
-//#include <cstdlib> /* atof, rand, malloc... */
-//#include <cstddef> /* size_t, NULL */
-//#include <cstdarg> /* Variable argument functions */
-//#include <cctype> /* Character check functions */
-//#include <climits>
-//#include <cassert>
 #include <cmath>
-//#include <cstdint> /* C++11 only, standard u_int16 & such */
 
 #include "gtest/gtest.h"
 
@@ -64,13 +22,9 @@ using std::cout;
 using std::endl;
 using std::string;
 
-/******************* Type Definitions *********************/
-
-
 /***************** Constants & Macros *********************/
 static const char *I_BASE = "./src/input_e017.txt";
 static const char *I_TENS = "./src/input_e017_tens.txt";
-
 
 /****************** Class Definitions *********************/
 class NumToWord {
@@ -78,7 +32,7 @@ public:
     NumToWord() {};
     virtual	~NumToWord() {};
 
-    std::string phrase(int number) {
+    std::string to_words(int number) {
         std::string word;
 
         if (number < 1 || number > 1000) {
@@ -116,7 +70,7 @@ public:
         return word;
     }
 
-    void init_from_file() {
+    void init() {
         std::ifstream fin_base(I_BASE), fin_tens(I_TENS);
         base.push_back("zero");
 
@@ -163,46 +117,46 @@ TEST(Euler017, CountLetters) {
 }
 
 TEST(Euler017, TestUnderThousand) {
-    NumToWord gen;
-    gen.init_from_file();
+    NumToWord convert;
+    convert.init();
 
-    ASSERT_STREQ("three hundred and forty-two", gen.phrase(342).c_str());
-    ASSERT_STREQ("one hundred and fifteen", gen.phrase(115).c_str());
-    ASSERT_STREQ("two hundred", gen.phrase(200).c_str());
+    ASSERT_STREQ("three hundred and forty-two", convert.to_words(342).c_str());
+    ASSERT_STREQ("one hundred and fifteen", convert.to_words(115).c_str());
+    ASSERT_STREQ("two hundred", convert.to_words(200).c_str());
 }
 
 TEST(Euler017, TestUnderHundred) {
-    NumToWord gen;
-    gen.init_from_file();
+    NumToWord convert;
+    convert.init();
 
-    ASSERT_STREQ("twenty", gen.phrase(20).c_str());
-    ASSERT_STREQ("twenty-one", gen.phrase(21).c_str());
-    ASSERT_STREQ("thirty-five", gen.phrase(35).c_str());
-    ASSERT_STREQ("seventy-eight", gen.phrase(78).c_str());
-    ASSERT_STREQ("ninety-nine", gen.phrase(99).c_str());
+    ASSERT_STREQ("twenty", convert.to_words(20).c_str());
+    ASSERT_STREQ("twenty-one", convert.to_words(21).c_str());
+    ASSERT_STREQ("thirty-five", convert.to_words(35).c_str());
+    ASSERT_STREQ("seventy-eight", convert.to_words(78).c_str());
+    ASSERT_STREQ("ninety-nine", convert.to_words(99).c_str());
 }
 
 TEST(Euler017, TestUnderTwenty) {
-    std::string expect[] = {"zero", "one", "two", "three", "four", "five",
+    std::string actual, expect[] = {"zero", "one", "two", "three", "four", "five",
                             "six", "seven", "eight", "nine", "ten",
                             "eleven", "twelve", "thirteen", "fourteen", "fifteen",
                             "sixteen", "seventeen", "eighteen", "nineteen", "twenty"};
-    std::string actual;
 
-    NumToWord gen;
-    gen.init_from_file();
+    NumToWord convert;
+    convert.init();
     for (int i = 1; i < 11; ++i) {
-        actual = gen.phrase(i);
+        actual = convert.to_words(i);
         ASSERT_STREQ(expect[i].c_str(), actual.c_str());
     }
 }
 
 TEST(Euler017, FinalAnswer) {
-    NumToWord gen;
-    gen.init_from_file();
+    NumToWord convert;
+    convert.init();
     long count = 0;
+
     for (int i = 1; i < 1001; ++i) {
-        std::string words = gen.phrase(i);
+        std::string words = convert.to_words(i);
         count += count_chars(words);
     }
 
