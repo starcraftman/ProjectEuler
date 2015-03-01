@@ -44,6 +44,7 @@ TEST(Euler013, ReadIntFromFile) {
 }
 
 TEST(Euler013, SumNumbers) {
+    const char *expect = "5537376230390876637302048746832985971773659831892672";
     std::ifstream input(I_FILE);
     std::string line;
 
@@ -59,6 +60,7 @@ TEST(Euler013, SumNumbers) {
     std::stringstream ss;
     ss << counter;
     std::string first = ss.str();
+    ASSERT_STREQ(first.c_str(), expect);
 
     cout << "First 10 digits: ";
     for (std::string::const_iterator itr = first.begin(); itr != first.begin() + 10; ++itr) {
