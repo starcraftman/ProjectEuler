@@ -93,6 +93,12 @@ TEST(Euler012, TriangleGenerator) {
     ASSERT_EQ(expected_triangle, tg.number());
 }
 
+TEST(Euler012, TriangleAlternative) {
+    int desired_index = 50;
+    long expected = 1275, actual = e012::triangle(desired_index);
+    ASSERT_EQ(expected, actual);
+}
+
 TEST(Euler012, FindDivisors) {
     long triangle = 28;
     std::vector<int> expect, actual;

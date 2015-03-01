@@ -94,13 +94,50 @@ private:
     long t_number;
 };
 
+/* Struct, named pair. */
+class Triangle {
+public:
+    long triangle;
+    long divisors;
+};
+
+class TriangleManager {
+public:
+    TriangleManager() {
+        this->assigned = 0;
+        this->best.triangle = 0;
+        this->best.divisors = 0;
+    }
+    virtual	~TriangleManager() {};
+
+    inline TriangleManager & operator=(TriangleManager other) {
+        swap(*this, other);
+        return *this;
+    }
+    void swap(TriangleManager &first, TriangleManager &second) {
+        using std::swap;
+        swap(first.assigned, second.assigned);
+        swap(first.best, second.best);
+    }
+
+    void set_longest(Triangle &new_best) {
+        if (new_best.divisors > this->best.divisors) {
+            this->best.divisors = new_best.divisors;
+            this->best.triangle = new_best.triangle;
+        }
+    }
+
+private:
+    long assigned;
+    Triangle best;
+    boost::mutex mtx;
+};
+
 class Worker {
 public:
-    Worker(TriangleGenerator &tg) :
-        threadRunning(true), triangle(tg) { }
-    virtual ~Worker() {}
+    Worker() : threadRunning(true) { }
+    virtual ~Worker() { }
 
-    virtual void execute() = 0;
     virtual void start() = 0;
     inline void stop() {
         threadRunning = false;
@@ -110,10 +147,12 @@ public:
 protected:
     bool threadRunning;
     boost::thread thread;
-    TriangleGenerator triangle;
-    static boost::mutex mtx;
 };
-boost::mutex Worker::mtx;
+
+/* Triangles can be generated with simple formula ( n * n+1)/2 */
+long triangle(long index) {
+    return (index * (index + 1)) / 2;
+}
 
 void find_divisors(long tval, std::vector<int> &v) {
     for (int i = 1; i <= tval; ++i) {
@@ -122,7 +161,7 @@ void find_divisors(long tval, std::vector<int> &v) {
         }
     }
 }
-}
+} /* Namespace e012 */
 
 #endif /* _PROBLEM012-THREAD_HPP_ */
 
