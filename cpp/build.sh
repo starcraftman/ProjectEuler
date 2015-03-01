@@ -38,11 +38,13 @@ for arg; do
       ;;
     test)
       build
+      echo "Solutions available in: $BDIR/src/"
       "$BDIR/src/Euler012_thread_test"
       ;;
     *) # Default
       build
-      "$BDIR/src/Euler012_thread" 50
+      echo "Solutions available in: $BDIR/src/"
+      "$BDIR/src/Euler016"
       ;;
   esac
 done
