@@ -44,7 +44,7 @@ for arg; do
     *) # Default
       build
       echo "Solutions available in: $BDIR/src/"
-      "$BDIR/src/Euler016"
+      "$BDIR/src/Euler0$arg"
       ;;
   esac
 done
