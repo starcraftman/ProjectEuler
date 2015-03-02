@@ -13,6 +13,7 @@ NOTE: Do not count spaces or hyphens. For example, 342 (three hundred and forty-
 #include <exception>
 
 #include "gtest/gtest.h"
+
 /**************** Namespace Declarations ******************/
 using std::cin;
 using std::cout;
@@ -118,6 +119,9 @@ public:
         number = 0;
         return words;
     }
+    std::string get_zero(void) const {
+        return this->ones[0];
+    }
 };
 
 class ParseHundreds : public Parser {
@@ -140,9 +144,9 @@ public:
 };
 
 /* Parses anything beyond 999 */
-class ParserBeyond : public Parser {
+class ParseBeyond : public Parser {
 public:
-    ParserBeyond(unsigned long divisor, const char * const term) :
+    ParseBeyond(unsigned long divisor, const char * const term) :
         Parser(), divisor(divisor), term(term) {};
 
     bool check(const unsigned long number) const {
@@ -176,11 +180,11 @@ private:
 
 class NumToWords {
 public:
-    NumToWords() {
+    NumToWords(): maximum(1000000000) {
         static ParseTens tens;
         static ParseHundreds hundreds;
-        static ParserBeyond thousands(1000, "thousand");
-        static ParserBeyond millions(1000000, "million");
+        static ParseBeyond thousands(1000, "thousand");
+        static ParseBeyond millions(1000000, "million");
 
         list.push_back(&millions);
         list.push_back(&thousands);
@@ -191,10 +195,14 @@ public:
     std::string to_words(unsigned long number) {
         std::string words;
 
-        if (number < 1 || number >= 1000000000) {
-            cout << number << "--" << 1000000000 << endl;
+        if (number >= this->maximum) {
             ParseException exc(number);
             throw exc;
+        }
+
+        if (number == 0) {
+            static ParseTens tens;
+            return tens.get_zero();
         }
 
         /* Call applicable parsers. */
@@ -207,9 +215,9 @@ public:
 
         return words;
     }
-
 private:
     std::vector<Parser *> list;
+    unsigned long maximum;
 };
 
 /************** Global Vars & Functions *******************/
@@ -223,6 +231,7 @@ int count_chars(std::string input) {
             count++;
         }
     }
+
     return count;
 }
 
@@ -276,7 +285,7 @@ TEST(Euler017, TestUnderTwenty) {
                             "eleven", "twelve", "thirteen", "fourteen", "fifteen",
                             "sixteen", "seventeen", "eighteen", "nineteen", "twenty"};
 
-    for (int i = 1; i < 11; ++i) {
+    for (int i = 0; i < 20; ++i) {
         actual = convert.to_words(i);
         ASSERT_STREQ(expect[i].c_str(), actual.c_str());
     }
@@ -285,7 +294,6 @@ TEST(Euler017, TestUnderTwenty) {
 TEST(Euler017, ExceptionalCases) {
     NumToWords convert;
 
-    ASSERT_THROW(convert.to_words(0), ParseException);
     ASSERT_THROW(convert.to_words(100000000000000), ParseException);
 }
 
