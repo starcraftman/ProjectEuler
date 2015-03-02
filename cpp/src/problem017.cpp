@@ -36,21 +36,14 @@ private:
     int number;
 };
 
-class Pair {
-public:
-    Pair(int number, const char *words) : number(number), words(words) {};
-    int number;
-    std::string words;
-};
-
 class Parser {
 public:
     Parser() { this->init(); };
 
     /* Decide if parser applies */
-    virtual bool check(const Pair &pair) const = 0;
+    virtual bool check(const int number) const = 0;
     /* Find appropriate word & deduct number. */
-    virtual void parse(Pair &pair) = 0;
+    virtual std::string parse(int &number) = 0;
 
     void init() {
         std::ifstream fin(INPUT);;
@@ -80,12 +73,12 @@ class ParseThousands : public Parser {
 public:
     ParseThousands() : Parser() {};
 
-    bool check(const Pair &pair) const {
-        return pair.number == 1000;
+    bool check(const int number) const {
+        return number > 999 && number < 1000000;
     }
-    void parse(Pair &pair) {
-        pair.number -= 1000;
-        pair.words = "one thousand";
+    std::string parse(int &number) {
+        number -= 1000;
+        return "one thousand";
     }
 };
 
@@ -93,17 +86,18 @@ class ParseHundreds : public Parser {
 public:
     ParseHundreds() : Parser() {};
 
-    bool check(const Pair &pair) const {
-        return pair.number > 99 && pair.number < 1000;
+    bool check(const int number) const {
+        return number > 99 && number < 1000;
     }
-    void parse(Pair &pair) {
-        int num_hundreds = pair.number / 100;
-        pair.words += this->ones[num_hundreds] + " hundred";
-        pair.number -= num_hundreds * 100;
+    std::string parse(int &number) {
+        int num_hundreds = number / 100;
+        std::string words = this->ones[num_hundreds] + " hundred";
+        number -= num_hundreds * 100;
 
-        if (pair.number != 0) {
-            pair.words += " and ";
+        if (number != 0) {
+            words += " and ";
         }
+        return words;
     }
 };
 
@@ -111,23 +105,25 @@ class ParseTens : public Parser {
 public:
     ParseTens() : Parser() {};
 
-    bool check(const Pair &pair) const {
-        return pair.number > 0 && pair.number < 100;
+    bool check(const int number) const {
+        return number > 0 && number < 100;
     }
-    void parse(Pair &pair) {
-        if (pair.number > 19) {
-            int ten_pos = (pair.number / 10) - 2;
-            int ones_pos = pair.number % 10;
+    std::string parse(int &number) {
+        std::string words;
+        if (number > 19) {
+            int ten_pos = (number / 10) - 2;
+            int ones_pos = number % 10;
 
-            pair.words += this->tens[ten_pos];
+            words += this->tens[ten_pos];
             if (ones_pos > 0) {
-                pair.words += "-" + this->ones[ones_pos];
+                words += "-" + this->ones[ones_pos];
             }
         } else {
-            pair.words += this->ones[pair.number];
+            words += this->ones[number];
         }
 
-        pair.number = 0;
+        number = 0;
+        return words;
     }
 };
 
@@ -140,7 +136,7 @@ public:
     };
 
     std::string to_words(int number) {
-        Pair pair(number, "");
+        std::string words;
 
         if (number < 1 || number > 1000) {
             ParseException exc(number);
@@ -150,12 +146,12 @@ public:
         /* Call applicable parsers. */
         for (std::vector<Parser *>::iterator itr = list.begin();
                 itr != list.end(); ++itr) {
-            if ((*itr)->check(pair)) {
-                (*itr)->parse(pair);
+            if ((*itr)->check(number)) {
+                words += (*itr)->parse(number);
             }
         }
 
-        return pair.words;
+        return words;
     }
 
 private:
@@ -238,3 +234,4 @@ TEST(Euler017, FinalAnswer) {
     ASSERT_EQ(count, 21124);
     cout << "The number of characters is: " << count << endl;
 }
+
