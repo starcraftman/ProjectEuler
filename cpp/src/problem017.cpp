@@ -200,6 +200,7 @@ TEST(Euler017, CountLetters) {
 
     ASSERT_EQ(actual, expect);
 }
+
 TEST(Euler017, TestUnderMillion) {
     NumToWords convert;
 
