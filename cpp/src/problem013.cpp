@@ -17,7 +17,7 @@ using std::cout;
 using std::endl;
 using std::string;
 
-static const char *I_FILE = "./src/input_e013.txt";
+static const char *INPUT = "./src/input_e013.txt";
 
 /****************** Class Definitions *********************/
 
@@ -33,7 +33,7 @@ TEST(Euler013, LoadBigInt) {
 
 TEST(Euler013, ReadIntFromFile) {
     const char *expect = "37107287533902102798797998220837590246510135740250";
-    std::ifstream input(I_FILE);
+    std::ifstream input(INPUT);
     std::string line;
     std::getline(input, line);
     boost::multiprecision::cpp_int big(line);
@@ -45,7 +45,7 @@ TEST(Euler013, ReadIntFromFile) {
 
 TEST(Euler013, SumNumbers) {
     const char *expect = "5537376230390876637302048746832985971773659831892672";
-    std::ifstream input(I_FILE);
+    std::ifstream input(INPUT);
     std::string line;
 
     std::getline(input, line);

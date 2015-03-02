@@ -23,8 +23,7 @@ using std::endl;
 using std::string;
 
 /***************** Constants & Macros *********************/
-static const char *I_BASE = "./src/input_e017.txt";
-static const char *I_TENS = "./src/input_e017_tens.txt";
+static const char *INPUT = "./src/input_e017.txt";
 
 /****************** Class Definitions *********************/
 class NumToWord {
@@ -71,18 +70,21 @@ public:
     }
 
     void init() {
-        std::ifstream fin_base(I_BASE), fin_tens(I_TENS);
-        base.push_back("zero");
-
-        int val;
+        std::ifstream fin(INPUT);;
         std::string name;
-        while(fin_base.good()) {
-            fin_base >> val >> name;
+        int val;
+
+        base.push_back("zero");
+        while(fin.good()) {
+            fin >> val >> name;
             base.push_back(name);
         }
 
-        while(fin_tens.good()) {
-            fin_tens >> val >> name;
+        fin.clear();
+        std::getline(fin, name);
+
+        while(fin.good()) {
+            fin >> val >> name;
             tens.push_back(name);
         }
     };
@@ -91,7 +93,6 @@ private:
     std::vector<std::string> base;
     std::vector<std::string> tens;
 };
-
 
 /************** Global Vars & Functions *******************/
 int count_chars(std::string input) {
