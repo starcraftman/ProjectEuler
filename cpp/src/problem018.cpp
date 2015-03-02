@@ -63,67 +63,80 @@ using std::endl;
 using std::string;
 
 /******************* Type Definitions *********************/
-typedef unsigned long num_t;
-typedef std::pair<num_t, int> pair_t;
+typedef unsigned long product_t;
+typedef unsigned short num_t;
+typedef std::vector<num_t> nums_t;
 
 /***************** Constants & Macros *********************/
 static const char * const INPUT = "src/input_e018.txt";
 
 /****************** Class Definitions *********************/
+/* Tracks a path as we go down the pyramid. */
+class Tracker {
+public:
+    Tracker() : product(1) {};
+    Tracker(const Tracker &other) : product(other.product), nums(other.nums) {};
+    virtual	~Tracker() {};
 
+    /* Operators */
+    inline Tracker & operator=(const Tracker &other) {
+        Tracker temp(other);
+        swap(*this, temp);
+        return *this;
+    }
+    void swap(Tracker &first, Tracker &second) {
+        using std::swap;
+        swap(first.product, second.product);
+        swap(first.nums, second.nums);
+    }
+
+    inline product_t get_proudct() { return product; }
+
+    inline nums_t get_nums() { return nums; }
+
+    inline void multiply(num_t val) {
+        product *= val;
+        nums.push_back(val);
+    }
+private:
+    product_t product;
+    nums_t nums;
+};
 
 /************** Global Vars & Functions *******************/
-void make_tree(std::istream input, std::vector<num_t> &tree) {
-    while (input) {
-        std::string line;
-        std::getline(input, line);
-    }
-}
+void process_line(std::string line, std::vector<Tracker> &originals) {
+    std::stringstream vals(line);
+    std::vector<num_t> next_row;
+    std::vector<Tracker> new_trackers;
 
-/* Based on previous position i in a zero index binary array. Adjacent values are:
- * left:  2*i + 0
- * right: 2*i + 1
- */
-pair_t choose_max_adjacent(int last_pos, std::vector<num_t> &tree) {
-    int l_index = 2 * last_pos, r_index= (2 * last_pos) + 1;
-    num_t left = tree[l_index], right = tree[r_index];
-
-    pair_t pair;
-    if (left >= right) {
-        pair.first = left;
-        pair.second = l_index;
-    } else {
-        pair.first = right;
-        pair.second = r_index;
+    num_t temp;
+    while (vals.good()) {
+        vals >> temp;
+        next_row.push_back(temp);
     }
 
-    return pair;
+    int pos = 0;
+    for (std::vector<Tracker>::const_iterator itr = originals.begin(); itr != originals.end(); ++itr)  {
+        Tracker temp_l(*itr), temp_r(*itr);
+        temp_l.multiply(next_row[pos]);
+        temp_r.multiply(next_row[pos+1]);
+
+        new_trackers.push_back(temp_l);
+        new_trackers.push_back(temp_r);
+        ++pos;
+    }
+
+    originals = new_trackers;
 }
 
-TEST(Euler018, SimplestTree) {
-    std::ifstream fin(INPUT);
-    std::vector<num_t> tree, solution;
-    std::string line;
-    num_t val;
-    int count = 1;
+TEST(Euler018, SimplestTracker) {
+    Tracker t1;
+    t1.multiply(50);
 
-    while (fin.good()) {
-        fin >> val;
-    };
+    ASSERT_EQ(50, t1.get_proudct());
+    nums_t list = t1.get_nums();
+    ASSERT_EQ(50, list.back());
 }
-
-TEST(Euler018, ChooseMaxTree) {
-    std::vector<num_t> tree1 = boost::assign::list_of    (15) (34) (83) (22);
-    std::vector<num_t> tree2 = boost::assign::list_of (6) (55) (55) (77) (77) (100) (100) (16);
-
-    pair_t result = choose_max_adjacent(0, tree1);
-    ASSERT_EQ(34, result.first);
-    ASSERT_EQ(1, result.second);
-    result = choose_max_adjacent(result.second, tree1);
-    ASSERT_EQ(77, result.first);
-    ASSERT_EQ(1, result.second);
-}
-
 
 /* Notes:
  * Force call to use another version of virtual function: baseP->Item_base::net_price(42);
