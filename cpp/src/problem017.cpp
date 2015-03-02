@@ -10,9 +10,7 @@ NOTE: Do not count spaces or hyphens. For example, 342 (three hundred and forty-
 #include <iostream> /* Input/output objects. */
 #include <fstream> /* File operations. */
 #include <string> /* C++ String class. */
-
-/* C Headers */
-#include <cmath>
+#include <exception>
 
 #include "gtest/gtest.h"
 
@@ -26,58 +24,43 @@ using std::string;
 static const char *INPUT = "./src/input_e017.txt";
 
 /****************** Class Definitions *********************/
-class NumToWord {
+class ParseException : public std::exception {
 public:
-    NumToWord() {};
-    virtual	~NumToWord() {};
-
-    std::string to_words(int number) {
-        std::string word;
-
-        if (number < 1 || number > 1000) {
-            return "not supported";
-        }
-
-        if (number == 1000) {
-            return "one thousand";
-        }
-
-        /* 100 - 999 */
-        if (number < 1000 && number > 99) { /* Hundreds */
-            int num_hundreds = std::floor(number / 100.0);
-            word += base[num_hundreds] + " hundred";
-            number -= num_hundreds * 100;
-
-            if (number != 0) {
-                word += " and ";
-            }
-        }
-
-        /* Number less than 100 */
-        if (number < 100 && number > 19) {
-            int ones_pos = number % 10;
-            int ten_pos = std::floor(number / 10.0) - 2;
-
-            word += this->tens[ten_pos];
-            if (ones_pos > 0) {
-                word += "-" + this->base[ones_pos];
-            }
-        } else if (number != 0) {
-            word += this->base[number];
-        }
-
-        return word;
+    ParseException(int number) : number(number) {};
+    virtual const char * what() const throw() {
+        std::string msg = "Number not supported: ";
+        msg += this->number;
+        return msg.c_str();
     }
+private:
+    int number;
+};
+
+class Pair {
+public:
+    Pair(int number, const char *words) : number(number), words(words) {};
+    int number;
+    std::string words;
+};
+
+class Parser {
+public:
+    Parser() { this->init(); };
+
+    /* Decide if parser applies */
+    virtual bool check(const Pair &pair) const = 0;
+    /* Find appropriate word & deduct number. */
+    virtual void parse(Pair &pair) = 0;
 
     void init() {
         std::ifstream fin(INPUT);;
         std::string name;
         int val;
 
-        base.push_back("zero");
+        this->ones.push_back("zero");
         while(fin.good()) {
             fin >> val >> name;
-            base.push_back(name);
+            this->ones.push_back(name);
         }
 
         fin.clear();
@@ -87,11 +70,99 @@ public:
             fin >> val >> name;
             tens.push_back(name);
         }
-    };
-private:
-    NumToWord(const NumToWord &other);
-    std::vector<std::string> base;
+    }
+protected:
+    std::vector<std::string> ones;
     std::vector<std::string> tens;
+};
+
+class ParseThousands : public Parser {
+public:
+    ParseThousands() : Parser() {};
+
+    bool check(const Pair &pair) const {
+        return pair.number == 1000;
+    }
+    void parse(Pair &pair) {
+        pair.number -= 1000;
+        pair.words = "one thousand";
+    }
+};
+
+class ParseHundreds : public Parser {
+public:
+    ParseHundreds() : Parser() {};
+
+    bool check(const Pair &pair) const {
+        return pair.number > 99 && pair.number < 1000;
+    }
+    void parse(Pair &pair) {
+        int num_hundreds = pair.number / 100;
+        pair.words += this->ones[num_hundreds] + " hundred";
+        pair.number -= num_hundreds * 100;
+
+        if (pair.number != 0) {
+            pair.words += " and ";
+        }
+    }
+};
+
+class ParseTens : public Parser {
+public:
+    ParseTens() : Parser() {};
+
+    bool check(const Pair &pair) const {
+        return pair.number > 0 && pair.number < 100;
+    }
+    void parse(Pair &pair) {
+        if (pair.number > 19) {
+            int ten_pos = (pair.number / 10) - 2;
+            int ones_pos = pair.number % 10;
+
+            pair.words += this->tens[ten_pos];
+            if (ones_pos > 0) {
+                pair.words += "-" + this->ones[ones_pos];
+            }
+        } else {
+            pair.words += this->ones[pair.number];
+        }
+
+        pair.number = 0;
+    }
+};
+
+class NumToWords {
+public:
+    NumToWords() {
+        list.push_back(&this->parseThousands);
+        list.push_back(&this->parseHundreds);
+        list.push_back(&this->parseTens);
+    };
+
+    std::string to_words(int number) {
+        Pair pair(number, "");
+
+        if (number < 1 || number > 1000) {
+            ParseException exc(number);
+            throw exc;
+        }
+
+        /* Call applicable parsers. */
+        for (std::vector<Parser *>::iterator itr = list.begin();
+                itr != list.end(); ++itr) {
+            if ((*itr)->check(pair)) {
+                (*itr)->parse(pair);
+            }
+        }
+
+        return pair.words;
+    }
+
+private:
+    ParseTens parseTens;
+    ParseHundreds parseHundreds;
+    ParseThousands parseThousands;
+    std::vector<Parser *> list;
 };
 
 /************** Global Vars & Functions *******************/
@@ -118,8 +189,7 @@ TEST(Euler017, CountLetters) {
 }
 
 TEST(Euler017, TestUnderThousand) {
-    NumToWord convert;
-    convert.init();
+    NumToWords convert;
 
     ASSERT_STREQ("three hundred and forty-two", convert.to_words(342).c_str());
     ASSERT_STREQ("one hundred and fifteen", convert.to_words(115).c_str());
@@ -127,8 +197,7 @@ TEST(Euler017, TestUnderThousand) {
 }
 
 TEST(Euler017, TestUnderHundred) {
-    NumToWord convert;
-    convert.init();
+    NumToWords convert;
 
     ASSERT_STREQ("twenty", convert.to_words(20).c_str());
     ASSERT_STREQ("twenty-one", convert.to_words(21).c_str());
@@ -138,22 +207,27 @@ TEST(Euler017, TestUnderHundred) {
 }
 
 TEST(Euler017, TestUnderTwenty) {
+    NumToWords convert;
     std::string actual, expect[] = {"zero", "one", "two", "three", "four", "five",
                             "six", "seven", "eight", "nine", "ten",
                             "eleven", "twelve", "thirteen", "fourteen", "fifteen",
                             "sixteen", "seventeen", "eighteen", "nineteen", "twenty"};
 
-    NumToWord convert;
-    convert.init();
     for (int i = 1; i < 11; ++i) {
         actual = convert.to_words(i);
         ASSERT_STREQ(expect[i].c_str(), actual.c_str());
     }
 }
 
+TEST(Euler017, ExceptionalCases) {
+    NumToWords convert;
+
+    ASSERT_THROW(convert.to_words(0), ParseException);
+    ASSERT_THROW(convert.to_words(10000), ParseException);
+}
+
 TEST(Euler017, FinalAnswer) {
-    NumToWord convert;
-    convert.init();
+    NumToWords convert;
     long count = 0;
 
     for (int i = 1; i < 1001; ++i) {
@@ -164,9 +238,3 @@ TEST(Euler017, FinalAnswer) {
     ASSERT_EQ(count, 21124);
     cout << "The number of characters is: " << count << endl;
 }
-
-/* Notes:
- * Force call to use another version of virtual function: baseP->Item_base::net_price(42);
- *
- */
-
