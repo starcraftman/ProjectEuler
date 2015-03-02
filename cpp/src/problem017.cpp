@@ -69,38 +69,6 @@ protected:
     std::vector<std::string> tens;
 };
 
-class ParseThousands : public Parser {
-public:
-    ParseThousands() : Parser() {};
-
-    bool check(const int number) const {
-        return number > 999 && number < 1000000;
-    }
-    std::string parse(int &number) {
-        number -= 1000;
-        return "one thousand";
-    }
-};
-
-class ParseHundreds : public Parser {
-public:
-    ParseHundreds() : Parser() {};
-
-    bool check(const int number) const {
-        return number > 99 && number < 1000;
-    }
-    std::string parse(int &number) {
-        int num_hundreds = number / 100;
-        std::string words = this->ones[num_hundreds] + " hundred";
-        number -= num_hundreds * 100;
-
-        if (number != 0) {
-            words += " and ";
-        }
-        return words;
-    }
-};
-
 class ParseTens : public Parser {
 public:
     ParseTens() : Parser() {};
@@ -127,6 +95,55 @@ public:
     }
 };
 
+class ParseHundreds : public Parser {
+public:
+    ParseHundreds() : Parser() {};
+
+    bool check(const int number) const {
+        return number > 99 && number < 1000;
+    }
+    std::string parse(int &number) {
+        int num_hundreds = number / 100;
+        std::string words = this->ones[num_hundreds] + " hundred";
+        number -= num_hundreds * 100;
+
+        if (number != 0) {
+            words += " and ";
+        }
+        return words;
+    }
+};
+
+class ParseThousands : public Parser {
+public:
+    ParseThousands() : Parser() {};
+
+    bool check(const int number) const {
+        return number > 999 && number < 1000000;
+    }
+    std::string parse(int &number) {
+        std::string words;
+        ParseHundreds huns;
+        ParseTens tens;
+        int huns_rem = number / 1000;
+
+        if (huns.check(huns_rem)) {
+            words += huns.parse(huns_rem);
+        }
+        if (tens.check(huns_rem)) {
+            words += tens.parse(huns_rem);
+        }
+
+        words += " thousand";
+        if ((number % 1000) != 0) {
+            words += " ";
+        }
+
+        number -= (number/1000) * 1000;
+        return words;
+    }
+};
+
 class NumToWords {
 public:
     NumToWords() {
@@ -138,7 +155,7 @@ public:
     std::string to_words(int number) {
         std::string words;
 
-        if (number < 1 || number > 1000) {
+        if (number < 1 || number > 999999) {
             ParseException exc(number);
             throw exc;
         }
@@ -183,6 +200,13 @@ TEST(Euler017, CountLetters) {
 
     ASSERT_EQ(actual, expect);
 }
+TEST(Euler017, TestUnderMillion) {
+    NumToWords convert;
+
+    ASSERT_STREQ("fifty-four thousand two hundred and sixty-six", convert.to_words(54266).c_str());
+    ASSERT_STREQ("six hundred and twenty-one thousand nine hundred and thirty-eight",
+            convert.to_words(621938).c_str());
+}
 
 TEST(Euler017, TestUnderThousand) {
     NumToWords convert;
@@ -219,7 +243,7 @@ TEST(Euler017, ExceptionalCases) {
     NumToWords convert;
 
     ASSERT_THROW(convert.to_words(0), ParseException);
-    ASSERT_THROW(convert.to_words(10000), ParseException);
+    ASSERT_THROW(convert.to_words(1000000), ParseException);
 }
 
 TEST(Euler017, FinalAnswer) {
