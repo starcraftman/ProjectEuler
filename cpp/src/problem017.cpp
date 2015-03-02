@@ -8,7 +8,7 @@ NOTE: Do not count spaces or hyphens. For example, 342 (three hundred and forty-
 /********************* Header Files ***********************/
 /* C++ Headers */
 #include <iostream> /* Input/output objects. */
-#include <fstream> /* File operations. */
+#include <sstream>
 #include <string> /* C++ String class. */
 #include <exception>
 
@@ -21,7 +21,36 @@ using std::endl;
 using std::string;
 
 /***************** Constants & Macros *********************/
-static const char *INPUT = "./src/input_e017.txt";
+static const char * const UNDER_TWENTY = "\
+1 one \
+2 two \
+3 three \
+4 four \
+5 five \
+6 six \
+7 seven \
+8 eight \
+9 nine \
+10 ten \
+11 eleven \
+12 twelve \
+13 thirteen \
+14 fourteen \
+15 fifteen \
+16 sixteen \
+17 seventeen \
+18 eighteen \
+19 nineteen";
+
+static const char * const UNDER_HUNDRED = "\
+20 twenty \
+30 thirty \
+40 forty \
+50 fifty \
+60 sixty \
+70 seventy \
+80 eighty \
+90 ninety";
 
 /****************** Class Definitions *********************/
 class ParseException : public std::exception {
@@ -46,22 +75,19 @@ public:
     virtual std::string parse(int &number) = 0;
 
     void init() {
-        std::ifstream fin(INPUT);;
+        std::stringstream ones(UNDER_TWENTY), tens(UNDER_HUNDRED);
         std::string name;
         int val;
 
         this->ones.push_back("zero");
-        while(fin.good()) {
-            fin >> val >> name;
+        while(ones.good()) {
+            ones >> val >> name;
             this->ones.push_back(name);
         }
 
-        fin.clear();
-        std::getline(fin, name);
-
-        while(fin.good()) {
-            fin >> val >> name;
-            tens.push_back(name);
+        while(tens.good()) {
+            tens >> val >> name;
+            this->tens.push_back(name);
         }
     }
 protected:
@@ -114,6 +140,9 @@ public:
     }
 };
 
+/* Handling millions, billions etc, follows same pattern as this one.
+ * I'd just have to parameterize this so that divisor (1000) & string (" thousand")
+ * could be changed. */
 class ParseThousands : public Parser {
 public:
     ParseThousands() : Parser() {};
@@ -122,16 +151,16 @@ public:
         return number > 999 && number < 1000000;
     }
     std::string parse(int &number) {
+        static ParseHundreds huns;
+        static ParseTens tens;
         std::string words;
-        ParseHundreds huns;
-        ParseTens tens;
-        int huns_rem = number / 1000;
 
-        if (huns.check(huns_rem)) {
-            words += huns.parse(huns_rem);
+        int num_thousands = number / 1000;
+        if (huns.check(num_thousands)) {
+            words += huns.parse(num_thousands);
         }
-        if (tens.check(huns_rem)) {
-            words += tens.parse(huns_rem);
+        if (tens.check(num_thousands)) {
+            words += tens.parse(num_thousands);
         }
 
         words += " thousand";
@@ -147,9 +176,13 @@ public:
 class NumToWords {
 public:
     NumToWords() {
-        list.push_back(&this->parseThousands);
-        list.push_back(&this->parseHundreds);
-        list.push_back(&this->parseTens);
+        static ParseTens tens;
+        static ParseHundreds hundreds;
+        static ParseThousands thousands;
+
+        list.push_back(&thousands);
+        list.push_back(&hundreds);
+        list.push_back(&tens);
     };
 
     std::string to_words(int number) {
@@ -172,9 +205,6 @@ public:
     }
 
 private:
-    ParseTens parseTens;
-    ParseHundreds parseHundreds;
-    ParseThousands parseThousands;
     std::vector<Parser *> list;
 };
 
@@ -251,7 +281,7 @@ TEST(Euler017, FinalAnswer) {
     NumToWords convert;
     long count = 0;
 
-    for (int i = 1; i < 1001; ++i) {
+    for (int i = 1; i <= 1000; ++i) {
         std::string words = convert.to_words(i);
         count += count_chars(words);
     }
