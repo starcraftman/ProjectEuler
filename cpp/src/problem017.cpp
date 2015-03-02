@@ -13,7 +13,6 @@ NOTE: Do not count spaces or hyphens. For example, 342 (three hundred and forty-
 #include <exception>
 
 #include "gtest/gtest.h"
-
 /**************** Namespace Declarations ******************/
 using std::cin;
 using std::cout;
@@ -55,14 +54,14 @@ static const char * const UNDER_HUNDRED = "\
 /****************** Class Definitions *********************/
 class ParseException : public std::exception {
 public:
-    ParseException(int number) : number(number) {};
+    ParseException(unsigned long number) : number(number) {};
     virtual const char * what() const throw() {
         std::string msg = "Number not supported: ";
         msg += this->number;
         return msg.c_str();
     }
 private:
-    int number;
+    unsigned long number;
 };
 
 class Parser {
@@ -70,9 +69,9 @@ public:
     Parser() { this->init(); };
 
     /* Decide if parser applies */
-    virtual bool check(const int number) const = 0;
+    virtual bool check(const unsigned long number) const = 0;
     /* Find appropriate word & deduct number. */
-    virtual std::string parse(int &number) = 0;
+    virtual std::string parse(unsigned long &number) = 0;
 
     void init() {
         std::stringstream ones(UNDER_TWENTY), tens(UNDER_HUNDRED);
@@ -99,14 +98,14 @@ class ParseTens : public Parser {
 public:
     ParseTens() : Parser() {};
 
-    bool check(const int number) const {
+    bool check(const unsigned long number) const {
         return number > 0 && number < 100;
     }
-    std::string parse(int &number) {
+    std::string parse(unsigned long &number) {
         std::string words;
         if (number > 19) {
-            int ten_pos = (number / 10) - 2;
-            int ones_pos = number % 10;
+            unsigned long ten_pos = (number / 10) - 2;
+            unsigned long ones_pos = number % 10;
 
             words += this->tens[ten_pos];
             if (ones_pos > 0) {
@@ -125,11 +124,11 @@ class ParseHundreds : public Parser {
 public:
     ParseHundreds() : Parser() {};
 
-    bool check(const int number) const {
+    bool check(const unsigned long number) const {
         return number > 99 && number < 1000;
     }
-    std::string parse(int &number) {
-        int num_hundreds = number / 100;
+    std::string parse(unsigned long &number) {
+        unsigned long num_hundreds = number / 100;
         std::string words = this->ones[num_hundreds] + " hundred";
         number -= num_hundreds * 100;
 
@@ -140,37 +139,39 @@ public:
     }
 };
 
-/* Handling millions, billions etc, follows same pattern as this one.
- * I'd just have to parameterize this so that divisor (1000) & string (" thousand")
- * could be changed. */
-class ParseThousands : public Parser {
+/* Parses anything beyond 999 */
+class ParserBeyond : public Parser {
 public:
-    ParseThousands() : Parser() {};
+    ParserBeyond(unsigned long divisor, const char * const term) :
+        Parser(), divisor(divisor), term(term) {};
 
-    bool check(const int number) const {
-        return number > 999 && number < 1000000;
+    bool check(const unsigned long number) const {
+        return number > this->divisor -1 && number < this->divisor * 1000;
     }
-    std::string parse(int &number) {
+    std::string parse(unsigned long &number) {
         static ParseHundreds huns;
         static ParseTens tens;
         std::string words;
 
-        int num_thousands = number / 1000;
-        if (huns.check(num_thousands)) {
-            words += huns.parse(num_thousands);
+        unsigned long num_term = number / this->divisor;
+        if (huns.check(num_term)) {
+            words += huns.parse(num_term);
         }
-        if (tens.check(num_thousands)) {
-            words += tens.parse(num_thousands);
+        if (tens.check(num_term)) {
+            words += tens.parse(num_term);
         }
 
-        words += " thousand";
-        if ((number % 1000) != 0) {
+        words += " " + this->term;
+        if ((number % this->divisor) != 0) {
             words += " ";
         }
 
-        number -= (number/1000) * 1000;
+        number -= (number/this->divisor) * this->divisor;
         return words;
     }
+private:
+    unsigned long divisor;
+    std::string term;
 };
 
 class NumToWords {
@@ -178,17 +179,20 @@ public:
     NumToWords() {
         static ParseTens tens;
         static ParseHundreds hundreds;
-        static ParseThousands thousands;
+        static ParserBeyond thousands(1000, "thousand");
+        static ParserBeyond millions(1000000, "million");
 
+        list.push_back(&millions);
         list.push_back(&thousands);
         list.push_back(&hundreds);
         list.push_back(&tens);
     };
 
-    std::string to_words(int number) {
+    std::string to_words(unsigned long number) {
         std::string words;
 
-        if (number < 1 || number > 999999) {
+        if (number < 1 || number >= 1000000000) {
+            cout << number << "--" << 1000000000 << endl;
             ParseException exc(number);
             throw exc;
         }
@@ -229,6 +233,14 @@ TEST(Euler017, CountLetters) {
     actual = count_chars(input);
 
     ASSERT_EQ(actual, expect);
+}
+
+TEST(Euler017, TestUnderBillion) {
+    NumToWords convert;
+
+    std::string expect("one hundred and eighty-seven million six hundred and ");
+    expect += "forty-three thousand nine hundred and sixty-six";
+    ASSERT_STREQ(expect.c_str(), convert.to_words(187643966).c_str());
 }
 
 TEST(Euler017, TestUnderMillion) {
@@ -274,7 +286,7 @@ TEST(Euler017, ExceptionalCases) {
     NumToWords convert;
 
     ASSERT_THROW(convert.to_words(0), ParseException);
-    ASSERT_THROW(convert.to_words(1000000), ParseException);
+    ASSERT_THROW(convert.to_words(100000000000000), ParseException);
 }
 
 TEST(Euler017, FinalAnswer) {
