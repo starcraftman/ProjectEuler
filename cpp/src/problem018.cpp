@@ -54,7 +54,6 @@
 //$include <cstdint> /* C++11 only, standard u_int16 & such */
 
 #include "gtest/gtest.h"
-#include "boost/assign/list_of.hpp"
 
 /**************** Namespace Declarations ******************/
 using std::cin;
@@ -105,28 +104,28 @@ private:
 };
 
 /************** Global Vars & Functions *******************/
-void process_line(std::string line, std::vector<Tracker> &originals) {
-    std::stringstream vals(line);
-    std::vector<num_t> next_row;
-    std::vector<Tracker> old_trackers(originals);
-    originals.clear();
+void make_a_tree(std::istream &input, std::vector<num_t> &tree) {
+    num_t val;
+    std::string line;
 
-    num_t temp = 0;
-    while (vals.good()) {
-        vals >> temp;
-        next_row.push_back(temp);
-    }
+    while(std::getline(input, line)) {
+        std::vector<num_t> new_row;
+        std::stringstream ss(line);
 
-    std::vector<num_t>::size_type pos(0);
-    /* TODO: This looping incorrect. */
-    while ((pos + 1) != next_row.size()) {
-        Tracker temp_l(old_trackers[pos]), temp_r(old_trackers[pos]);
-        temp_l.add(next_row[pos]);
-        temp_r.add(next_row[pos+1]);
+        while(ss >> val) {
+            new_row.insert(new_row.begin(), val);
+        }
 
-        originals.push_back(temp_l);
-        originals.push_back(temp_r);
-        ++pos;
+        std::vector<num_t>::size_type max_size = new_row.size();
+        while(new_row.size() != 0) {
+            if (new_row.size() == max_size || new_row.size() == 1) {
+                tree.push_back(new_row.back());
+            } else {
+                tree.push_back(new_row.back());
+                tree.push_back(new_row.back());
+            }
+            new_row.pop_back();
+        }
     }
 }
 
@@ -146,29 +145,6 @@ void trace_vec(std::vector<Tracker> &v) {
     cout << "------------------" << endl;
 }
 
-TEST(Euler018, ProcessALine) {
-    std::ifstream fin(INPUT);
-    std::string line;
-    std::vector<Tracker> v;
-
-    /* Setup Initial Node */
-    num_t temp;
-    fin >> temp;
-    std::getline(fin, line);
-    Tracker root;
-    root.add(temp);
-
-    v.push_back(root);
-
-    std::getline(fin, line);
-    process_line(line, v);
-
-    ASSERT_EQ(2, v.size());
-    ASSERT_EQ(139, v.back().get_sum());
-    v.pop_back();
-    ASSERT_EQ(170, v.back().get_sum());
-}
-
 TEST(Euler018, SimplestTracker) {
     Tracker t1;
     t1.add(50);
@@ -178,39 +154,21 @@ TEST(Euler018, SimplestTracker) {
     ASSERT_EQ(50, list.back());
 }
 
-TEST(Euler018, FinalAnswer) {
+TEST(Euler018, TreeCreation) {
     std::ifstream fin(INPUT);
-    std::string line;
-    std::vector<Tracker> v;
+    std::vector<num_t> tree;
 
-    /* Setup Initial Node */
-    num_t temp;
-    fin >> temp;
-    std::getline(fin, line);
-    Tracker root;
-    root.add(temp);
+    make_a_tree(fin, tree);
+    ASSERT_EQ(75, tree[0]);
+    ASSERT_EQ(23, tree.back());
 
-    v.push_back(root);
-
-    while (std::getline(fin, line)) {
-        process_line(line, v);
-        trace_vec(v);
-    }
-
-    /* Sort vec */
-    std::sort(v.begin(), v.end());
-
-    /* Answer at back. */
-    root = v.back();
-    cout << "Final Sum: " << endl << root.get_sum() << endl
-        << "Sum of:" << endl;
-
-    nums_t nums = root.get_nums();
-    for (std::vector<num_t>::const_iterator itr_n = nums.begin(); itr_n != nums.end(); ++itr_n) {
-        cout << *itr_n << " + ";
-    }
-    cout << endl;
+    int index = 9, left = 2 * index + 1, right = 2 * index + 2;
+    ASSERT_EQ(47, tree[left]);
+    ASSERT_EQ(65, tree[right]);
 }
+
+//TEST(Euler018, FinalAnswer) {
+//}
 
 /* Notes:
  * Force call to use another version of virtual function: baseP->Item_base::net_price(42);
