@@ -90,14 +90,13 @@ public:
         swap(first.nums, second.nums);
     }
 
-    inline product_t get_proudct() { return product; }
-
-    inline nums_t get_nums() { return nums; }
-
     inline void multiply(num_t val) {
         product *= val;
         nums.push_back(val);
     }
+    inline product_t get_proudct() const { return product; }
+    inline nums_t get_nums() const { return nums; }
+
 private:
     product_t product;
     nums_t nums;
