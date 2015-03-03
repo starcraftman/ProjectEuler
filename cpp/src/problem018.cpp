@@ -38,7 +38,7 @@
 //#include <map> // multimap for multiple keys allowed.
 //#include <bitset>
 //#include <utility> // Has pair for map, std::swap
-//#include <algorithm>
+#include <algorithm>
 //#include <iterator> // Contains back_inserter function and like.
 
 /* C Headers */
@@ -63,7 +63,7 @@ using std::endl;
 using std::string;
 
 /******************* Type Definitions *********************/
-typedef unsigned long product_t;
+typedef unsigned long sum_t;
 typedef unsigned short num_t;
 typedef std::vector<num_t> nums_t;
 
@@ -74,8 +74,8 @@ static const char * const INPUT = "src/input_e018.txt";
 /* Tracks a path as we go down the pyramid. */
 class Tracker {
 public:
-    Tracker() : product(1) {};
-    Tracker(const Tracker &other) : product(other.product), nums(other.nums) {};
+    Tracker() : sum(0) {};
+    Tracker(const Tracker &other) : sum(other.sum), nums(other.nums) {};
     virtual	~Tracker() {};
 
     /* Operators */
@@ -86,19 +86,21 @@ public:
     }
     void swap(Tracker &first, Tracker &second) {
         using std::swap;
-        swap(first.product, second.product);
+        swap(first.sum, second.sum);
         swap(first.nums, second.nums);
     }
 
-    inline void multiply(num_t val) {
-        product *= val;
+    inline bool operator<(const Tracker &other) const { return this->sum < other.sum; }
+
+    inline void add(num_t val) {
+        sum += val;
         nums.push_back(val);
     }
-    inline product_t get_proudct() const { return product; }
+    inline sum_t get_sum() const { return sum; }
     inline nums_t get_nums() const { return nums; }
 
 private:
-    product_t product;
+    sum_t sum;
     nums_t nums;
 };
 
@@ -106,35 +108,107 @@ private:
 void process_line(std::string line, std::vector<Tracker> &originals) {
     std::stringstream vals(line);
     std::vector<num_t> next_row;
-    std::vector<Tracker> new_trackers;
+    std::vector<Tracker> old_trackers(originals);
+    originals.clear();
 
-    num_t temp;
+    num_t temp = 0;
     while (vals.good()) {
         vals >> temp;
         next_row.push_back(temp);
     }
 
-    int pos = 0;
-    for (std::vector<Tracker>::const_iterator itr = originals.begin(); itr != originals.end(); ++itr)  {
-        Tracker temp_l(*itr), temp_r(*itr);
-        temp_l.multiply(next_row[pos]);
-        temp_r.multiply(next_row[pos+1]);
+    std::vector<num_t>::size_type pos(0);
+    while ((pos + 1) != next_row.size()) {
+        Tracker temp_l(old_trackers[pos]), temp_r(old_trackers[pos]);
+        temp_l.add(next_row[pos]);
+        temp_r.add(next_row[pos+1]);
 
-        new_trackers.push_back(temp_l);
-        new_trackers.push_back(temp_r);
+        originals.push_back(temp_l);
+        originals.push_back(temp_r);
         ++pos;
     }
+}
 
-    originals = new_trackers;
+void trace_vec(std::vector<Tracker> &v) {
+    cout << "Tracing......" << endl;
+
+    int cnt = 0;
+    for (std::vector<Tracker>::const_iterator itr = v.begin(); itr != v.end(); ++itr) {
+        cout << "Tracker #" << cnt << " " << itr->get_sum() << endl;
+
+        nums_t nums = itr->get_nums();
+        for (std::vector<num_t>::const_iterator itr_n = nums.begin(); itr_n != nums.end(); ++itr_n) {
+            cout << *itr_n << " + ";
+        } cout << endl;
+    }
+
+    cout << "------------------" << endl;
+}
+
+TEST(Euler018, ProcessALine) {
+    std::ifstream fin(INPUT);
+    std::string line;
+    std::vector<Tracker> v;
+
+    /* Setup Initial Node */
+    num_t temp;
+    fin >> temp;
+    std::getline(fin, line);
+    Tracker root;
+    root.add(temp);
+
+    v.push_back(root);
+
+    std::getline(fin, line);
+    process_line(line, v);
+
+    ASSERT_EQ(2, v.size());
+    ASSERT_EQ(139, v.back().get_sum());
+    v.pop_back();
+    ASSERT_EQ(170, v.back().get_sum());
 }
 
 TEST(Euler018, SimplestTracker) {
     Tracker t1;
-    t1.multiply(50);
+    t1.add(50);
 
-    ASSERT_EQ(50, t1.get_proudct());
+    ASSERT_EQ(50, t1.get_sum());
     nums_t list = t1.get_nums();
     ASSERT_EQ(50, list.back());
+}
+
+TEST(Euler018, FinalAnswer) {
+    std::ifstream fin(INPUT);
+    std::string line;
+    std::vector<Tracker> v;
+
+    /* Setup Initial Node */
+    num_t temp;
+    fin >> temp;
+    std::getline(fin, line);
+    Tracker root;
+    root.add(temp);
+
+    v.push_back(root);
+
+    while (std::getline(fin, line)) {
+        process_line(line, v);
+        trace_vec(v);
+    }
+
+    /* Sort vec */
+    std::sort(v.begin(), v.end());
+
+    /* Answer at back. */
+    root = v.back();
+    cout << "Final Sum: " << endl << root.get_sum() << endl
+        << "Sum of:" << endl;
+
+    nums_t nums = root.get_nums();
+    for (std::vector<num_t>::const_iterator itr_n = nums.begin(); itr_n != nums.end(); ++itr_n) {
+        cout << *itr_n << " + ";
+    }
+    cout << endl;
 }
 
 /* Notes:
