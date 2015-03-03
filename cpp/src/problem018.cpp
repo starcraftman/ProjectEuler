@@ -118,6 +118,7 @@ void process_line(std::string line, std::vector<Tracker> &originals) {
     }
 
     std::vector<num_t>::size_type pos(0);
+    /* TODO: This looping incorrect. */
     while ((pos + 1) != next_row.size()) {
         Tracker temp_l(old_trackers[pos]), temp_r(old_trackers[pos]);
         temp_l.add(next_row[pos]);
@@ -134,7 +135,7 @@ void trace_vec(std::vector<Tracker> &v) {
 
     int cnt = 0;
     for (std::vector<Tracker>::const_iterator itr = v.begin(); itr != v.end(); ++itr) {
-        cout << "Tracker #" << cnt << " " << itr->get_sum() << endl;
+        cout << "Tracker #" << cnt++ << " " << itr->get_sum() << endl;
 
         nums_t nums = itr->get_nums();
         for (std::vector<num_t>::const_iterator itr_n = nums.begin(); itr_n != nums.end(); ++itr_n) {
