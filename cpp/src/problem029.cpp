@@ -5,6 +5,7 @@ Find all distinct numbers of form: a**b for:
 /********************* Header Files ***********************/
 /* C++ Headers */
 #include <iostream> /* Input/output objects. */
+#include <set>
 #include "gtest/gtest.h"
 #include "boost/multiprecision/cpp_int.hpp"
 
