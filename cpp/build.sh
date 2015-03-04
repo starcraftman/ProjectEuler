@@ -42,6 +42,7 @@ for arg; do
       "$BDIR/src/Euler012_thread_test"
       ;;
     *) # Default
+      command rm "$BDIR/src/Euler0$arg"
       build
       echo "Solutions available in: $BDIR/src/"
       "$BDIR/src/Euler0$arg"
