@@ -13,7 +13,8 @@ MESSAGE("CXX Flags: ${CMAKE_CXX_FLAGS}")
 
 SET(BOOST_ROOT  "${CMAKE_SOURCE_DIR}/libs")
 SET(GTEST_ROOT  "${BOOST_ROOT}")
-SET(CXX_LIB    "my_cpp")
+SET(CXX_LIB     "my_cpp")
+SET(GMP_LIB     "${CMAKE_SOURCE_DIR}/libs/lib/libgmp.a")
 
 FIND_PACKAGE(Boost 1.57.0 REQUIRED chrono date_time filesystem regex system thread)
 FIND_PACKAGE(GTest 1.7 REQUIRED)
@@ -21,6 +22,7 @@ FIND_PACKAGE(Threads REQUIRED)
 
 SET(SYS_LIBS
     ${Boost_LIBRARIES}
+    #${GMP_LIB}
     ${GTEST_BOTH_LIBRARIES}
     ${CMAKE_THREAD_LIBS_INIT}
 )
