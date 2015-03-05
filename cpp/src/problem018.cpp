@@ -1,6 +1,9 @@
 /**
- * Template C++ file.
- * Function with references to pointers: func(int *&ptr);
+ Triangle Path Top Bottom Problem:
+ - I think the solution has to do with top to bottom search.
+ - On a triangle with base 10, if you sum the bottom row into the max parent
+ you shrink problem considerably in a single iteration.
+ - Will require building a tree based on file where nodes on bottom link upwards to two parents.
  */
 /********************* Header Files ***********************/
 /* C++ Headers */
