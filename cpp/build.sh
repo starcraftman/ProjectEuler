@@ -13,8 +13,24 @@ usage() {
   *      : Problem number, build & run that problem. i.e. 22 -> run problem 22"
 }
 
+clean() {
+  rm -rf "$BDIR"
+  mkdir -p "$BDIR"
+  touch "$BDIR/DUMMY"
+}
+
+travis_tests() {
+  # Ignore it for now
+  GLOBIGNORE=$BDIR/src/Euler012*
+
+  TESTS=( "$BDIR/src/Euler"* )
+  for tcase in "${TESTS[@]}"; do
+    "$tcase"
+  done
+}
+
 build() {
-  if [ $BUILT -eq 1 ]; then
+  if [ $BUILT -eq 1 -a $# -ne 1 ]; then
     return
   fi
 
@@ -34,16 +50,18 @@ build() {
   echo "Note: Solutions available in: $BDIR/src/"
 }
 
-for arg; do
+shopt -s extglob # for +()
+
+while (( $# > 0 )); do
+  arg="$1"
+  shift
   case "$arg" in
     *help|-h)
       usage
       exit
       ;;
     clean)
-      rm -rf "$BDIR"
-      mkdir -p "$BDIR"
-      touch "$BDIR/DUMMY"
+      clean
       ;;
     lib)
       build
@@ -51,20 +69,17 @@ for arg; do
       ;;
     travis)
       build
-      # Ignore it for now
-      GLOBIGNORE=$BDIR/src/Euler012*
-      echo $GLOBIGNORE
-      "$BDIR/util/LibTest"
-      TESTS=( "$BDIR/src/Euler"* )
-      for tcase in "${TESTS[@]}"; do
-        "$tcase"
-      done
+      travis_tests
+      ;;
+    +([0-9]))
+      # Delete executable so run fails if compilation has errors
+      command rm "$BDIR/src/Euler0$arg" 2>/dev/null
+      build 1
+      "$BDIR/src/Euler0$arg"
       ;;
     *) # Default
-      # Force recompilation for single problem runs
-      command rm "$BDIR/src/Euler0$arg" 2>/dev/null
-      build
-      "$BDIR/src/Euler0$arg"
+      echo "$arg: Not Recognized!"
+      usage
       ;;
   esac
 done
