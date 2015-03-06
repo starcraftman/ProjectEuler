@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # Run this to build project with cmake
 # Alternative to my normal makefiles
-ROOT=$(readlink -f $(dirname $0))
-BDIR=$ROOT/gen
+ROOT="$(readlink -f $(dirname $0))"
+BDIR="$ROOT/gen"
 BUILT=0
 
 usage() {
   echo "Builds the project. Takes optional args:
-  clean: Remove build dir.
-  run  : Execute main program.
-  test : Run tests."
+  clean  : Remove build dir.
+  lib    : Build & run lib tests.
+  travis : Run tests.
+  *      : Problem number, build & run that problem. i.e. 22 -> run problem 22"
 }
 
 build() {
@@ -54,18 +55,14 @@ for arg; do
       GLOBIGNORE=$BDIR/src/Euler012*
       echo $GLOBIGNORE
       "$BDIR/util/LibTest"
-      TESTS=( $BDIR/src/Euler* )
+      TESTS=( "$BDIR/src/Euler"* )
       for tcase in "${TESTS[@]}"; do
         "$tcase"
       done
       ;;
-    test)
-      build
-      $BDIR/src/Euler*
-      ;;
     *) # Default
       # Force recompilation for single problem runs
-      command rm "$BDIR/src/Euler0$arg"
+      command rm "$BDIR/src/Euler0$arg" 2>/dev/null
       build
       "$BDIR/src/Euler0$arg"
       ;;
