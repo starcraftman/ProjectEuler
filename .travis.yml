@@ -9,4 +9,4 @@ before_script:
 
 script:
   # For now just cpp tests, retry
-  - bash ./cpp/build.sh clean test
+  - bash ./cpp/build.sh clean travis

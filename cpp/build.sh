@@ -3,6 +3,7 @@
 # Alternative to my normal makefiles
 ROOT=$(readlink -f $(dirname $0))
 BDIR=$ROOT/gen
+BUILT=0
 
 usage() {
   echo "Builds the project. Takes optional args:
@@ -12,6 +13,10 @@ usage() {
 }
 
 build() {
+  if [ $BUILT -eq 1 ]; then
+    return
+  fi
+
   if [ "$(uname -s)" == "Linux" -a ! -d ./libs/lib ]; then
     echo "Warning, libs doesn't exists. Run GetLibsI.py"
     exit
@@ -23,6 +28,9 @@ build() {
   fi
   make
   popd
+
+  BUILT=1
+  echo "Note: Solutions available in: $BDIR/src/"
 }
 
 for arg; do
@@ -36,15 +44,29 @@ for arg; do
       mkdir -p "$BDIR"
       touch "$BDIR/DUMMY"
       ;;
+    lib)
+      build
+      "$BDIR/util/LibTest"
+      ;;
+    travis)
+      build
+      # Ignore it for now
+      GLOBIGNORE=$BDIR/src/Euler012*
+      echo $GLOBIGNORE
+      "$BDIR/util/LibTest"
+      TESTS=( $BDIR/src/Euler* )
+      for tcase in "${TESTS[@]}"; do
+        "$tcase"
+      done
+      ;;
     test)
       build
-      echo "Solutions available in: $BDIR/src/"
-      "$BDIR/src/Euler012_thread_test"
+      $BDIR/src/Euler*
       ;;
     *) # Default
+      # Force recompilation for single problem runs
       command rm "$BDIR/src/Euler0$arg"
       build
-      echo "Solutions available in: $BDIR/src/"
       "$BDIR/src/Euler0$arg"
       ;;
   esac
