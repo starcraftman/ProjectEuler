@@ -33,7 +33,7 @@
 //#include <stack>
 //#include <queue>
 //#include <priority_queue>
-//#include <set> // multiset for multiple keys allowed.
+#include <set> // multiset for multiple keys allowed.
 //#include <map> // multimap for multiple keys allowed.
 //#include <bitset>
 //#include <utility> // Has pair for map, std::swap
@@ -49,7 +49,7 @@
 //#include <cctype> /* Character check functions */
 //#include <climits>
 //#include <cassert>
-//#include <cmath>
+#include <cmath>
 //$include <cstdint> /* C++11 only, standard u_int16 & such */
 
 /* Project Headers */
@@ -65,6 +65,20 @@ typedef unsigned int u_int;
 typedef unsigned short u_shrt;
 
 /************** Class & Func Declarations *****************/
+template <class T>
+std::set<T> find_divisors(T num) {
+    std::set<T> res;
+    T root = std::floor(std::sqrt(num));
+
+    for (int i = 1; i <= root; ++i) {
+        if ((num % i) == 0) {
+            res.insert(i);
+            res.insert(num / i);
+        }
+    }
+
+    return res;
+}
 
 }
 

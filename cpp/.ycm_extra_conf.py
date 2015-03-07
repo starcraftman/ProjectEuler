@@ -35,7 +35,7 @@ FLAGS = [
     '-I',
     'libs/include',
     '-I',
-    'cpplib',
+    'util',
     '-I',
     'src',
 ]

@@ -12,6 +12,7 @@
 
 #include "gtest/gtest.h"
 #include "util.hpp"
+#include "boost/assign/list_of.hpp"
 
 /**************** Namespace Declarations ******************/
 using std::cin;
@@ -32,5 +33,17 @@ using std::string;
 TEST(Util, Placeholder) {
     util::u_long num(88);
     ASSERT_EQ(88, num);
+}
+
+TEST(Util, Divisors) {
+    std::set<util::u_int> res, expect = boost::assign::list_of(1) (2) (4) (5) (10) (20) (25) (50) (100);
+    u_int num = 100;
+    res = util::find_divisors(num);
+
+    ASSERT_EQ(expect.size(), res.size());
+    for (std::set<util::u_int>::const_iterator i = res.begin(), e = expect.begin();
+            i != res.end(); ++i, ++e) {
+        ASSERT_EQ(*e, *i);
+    }
 }
 
