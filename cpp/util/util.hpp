@@ -66,7 +66,7 @@ typedef unsigned short u_shrt;
 
 /************** Class & Func Declarations *****************/
 template <class T>
-std::set<T> find_divisors(T num) {
+std::set<T> find_divisors(T num, bool proper=false) {
     std::set<T> res;
     T root = std::floor(std::sqrt(num));
 
@@ -77,7 +77,16 @@ std::set<T> find_divisors(T num) {
         }
     }
 
+    if (proper) {
+        res.erase(num);
+    }
+
     return res;
+}
+
+template <class T>
+bool is_prime(T num) {
+    return find_divisors(num).size() == 2;
 }
 
 }

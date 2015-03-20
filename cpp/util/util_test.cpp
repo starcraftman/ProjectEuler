@@ -35,7 +35,7 @@ TEST(Util, Placeholder) {
     ASSERT_EQ(88, num);
 }
 
-TEST(Util, Divisors) {
+TEST(Util, FindDivisors) {
     std::set<util::u_int> res, expect = boost::assign::list_of(1) (2) (4) (5) (10) (20) (25) (50) (100);
     u_int num = 100;
     res = util::find_divisors(num);
@@ -47,3 +47,8 @@ TEST(Util, Divisors) {
     }
 }
 
+TEST(Util, IsPrime) {
+    ASSERT_FALSE(util::is_prime(4));
+    ASSERT_TRUE(util::is_prime(7));
+    ASSERT_TRUE(util::is_prime(457));
+}
