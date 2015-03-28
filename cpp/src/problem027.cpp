@@ -58,7 +58,7 @@ starting with n = 0.
 //#include <map> // multimap for multiple keys allowed.
 //#include <bitset>
 //#include <utility> // Has pair for map, std::swap
-//#include <algorithm>
+#include <algorithm>
 //#include <iterator> // Contains back_inserter function and like.
 
 /* C Headers */
@@ -85,7 +85,7 @@ using std::string;
 /***************** Constants & Macros *********************/
 // Worst case: 1000^2 + 1000 * 1000 + 1000
 static const util::u_long PRIME_MAX = 2001000;
-static const std::set<util::u_long> primes = util::simple_sieve(PRIME_MAX);
+static const std::vector<util::u_long> primes = util::simple_sieve(PRIME_MAX);
 
 /****************** Class Definitions *********************/
 class Result {
@@ -109,7 +109,7 @@ int find_consec_primes(int a, int b) {
     util::u_long euler = 0;
 
     euler = euler_val(n, a, b);
-    while(primes.find(euler) != primes.end()) {
+    while(std::binary_search(primes.begin(), primes.end(), euler)) {
         count++;
         n++;
         euler = euler_val(n, a, b);

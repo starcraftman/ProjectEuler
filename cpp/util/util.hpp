@@ -78,8 +78,8 @@ T next_false(std::vector<bool> const & sieve, T start_index) {
 
 /* Return all primes under max. */
 template <class T>
-std::set<T> simple_sieve(T max) {
-    std::set<T> res;
+std::vector<T> simple_sieve(T max) {
+    std::vector<T> res;
 
     // Ignore 1 & 0
     std::vector<bool> sieve;
@@ -91,7 +91,7 @@ std::set<T> simple_sieve(T max) {
 
     T prime = 2;
     while (prime != -1) {
-        res.insert(prime);
+        res.push_back(prime);
 
         T index = prime;
         while (index <= max) {
