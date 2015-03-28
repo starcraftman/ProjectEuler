@@ -139,7 +139,7 @@ TEST(EulerQuads, EulerConsecutives) {
     ASSERT_EQ(80, find_consec_primes(-79, 1601));
 }
 
-TEST(EulerQuads, FinalAnswer) {
+TEST(EulerQuads, DISABLED_FinalAnswer) {
     Result res;
     int num_primes = 0;
     for (int a = -999; a < 1000; ++a) {
