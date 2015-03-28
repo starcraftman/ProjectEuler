@@ -83,7 +83,8 @@ using std::endl;
 using std::string;
 
 /***************** Constants & Macros *********************/
-static const util::u_long PRIME_MAX = 16000000;
+// Worst case: 1000^2 + 1000 * 1000 + 1000
+static const util::u_long PRIME_MAX = 2001000;
 static const std::set<util::u_long> primes = util::simple_sieve(PRIME_MAX);
 
 /****************** Class Definitions *********************/
@@ -140,7 +141,5 @@ TEST(EulerQuads, FinalAnswer) {
             }
         }
     }
-
-    res.print();
 }
 
