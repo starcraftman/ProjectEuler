@@ -27,7 +27,7 @@
 //#include <mutex>
 
 /* STL Headers */
-//#include <vector>
+#include <vector>
 //#include <list>
 //#include <deque>
 //#include <stack>
@@ -65,6 +65,46 @@ typedef unsigned int u_int;
 typedef unsigned short u_shrt;
 
 /************** Class & Func Declarations *****************/
+template<class T>
+T next_false(std::vector<bool> const & sieve, T start_index) {
+    for (T i = start_index; i < sieve.size(); ++i) {
+        if (sieve[i] == false) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
+/* Return all primes under max. */
+template <class T>
+std::set<T> simple_sieve(T max) {
+    std::set<T> res;
+
+    // Ignore 1 & 0
+    std::vector<bool> sieve;
+    sieve.push_back(true);
+    sieve.push_back(true);
+    for (T i = 2; i <= max; ++i) {
+        sieve.push_back(false);
+    }
+
+    T prime = 2;
+    while (prime != -1) {
+        res.insert(prime);
+
+        T index = prime;
+        while (index <= max) {
+            sieve[index] = true;
+            index += prime;
+        }
+
+        prime = next_false(sieve, prime);
+    }
+
+    return res;
+}
+
 template <class T>
 std::set<T> find_divisors(T num, bool proper=false) {
     std::set<T> res;

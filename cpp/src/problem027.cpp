@@ -68,7 +68,7 @@ starting with n = 0.
 //#include <cstddef> /* size_t, NULL */
 //#include <cstdarg> /* Variable argument functions */
 //#include <cctype> /* Character check functions */
-//#include <climits>
+#include <climits>
 //#include <cassert>
 //#include <cmath>
 //#include <cstdint> /* C++11 only, standard u_int16 & such */
@@ -82,21 +82,9 @@ using std::cout;
 using std::endl;
 using std::string;
 
-/******************* Type Definitions *********************/
-/* For enums: Try to namesapce the common elements.
- * typedef enum {
- *	VAL_,
- * } name_e;
- */
-
-/* For structs:
- * typedef struct name_s {
- *	int index;
- * } name_t;
- */
-
 /***************** Constants & Macros *********************/
-
+static const util::u_long PRIME_MAX = 16000000;
+static const std::set<util::u_long> primes = util::simple_sieve(PRIME_MAX);
 
 /****************** Class Definitions *********************/
 class Result {
@@ -120,7 +108,7 @@ int find_consec_primes(int a, int b) {
     util::u_long euler = 0;
 
     euler = euler_val(n, a, b);
-    while(util::is_prime(euler)) {
+    while(primes.find(euler) != primes.end()) {
         count++;
         n++;
         euler = euler_val(n, a, b);
@@ -135,17 +123,14 @@ TEST(EulerQuads, EulerGeneration) {
 }
 
 TEST(EulerQuads, EulerConsecutives) {
-    ASSERT_TRUE(util::is_prime(1601));
     ASSERT_EQ(80, find_consec_primes(-79, 1601));
 }
 
-TEST(EulerQuads, DISABLED_FinalAnswer) {
+TEST(EulerQuads, FinalAnswer) {
     Result res;
     int num_primes = 0;
     for (int a = -999; a < 1000; ++a) {
-        cout << "a: " << a << endl;
         for (int b = -999; b < 1000; ++b) {
-            cout << "b: " << b << endl;
             num_primes = find_consec_primes(a, b);
             if (num_primes > res.most_primes) {
                 res.most_primes = num_primes;

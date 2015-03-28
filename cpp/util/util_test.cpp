@@ -36,7 +36,8 @@ TEST(Util, Placeholder) {
 }
 
 TEST(Util, FindDivisors) {
-    std::set<util::u_int> res, expect = boost::assign::list_of(1) (2) (4) (5) (10) (20) (25) (50) (100);
+    std::set<util::u_int> res, expect = boost::assign::list_of(1) (2) (4) (5)
+        (10) (20) (25) (50) (100);
     u_int num = 100;
     res = util::find_divisors(num);
 
@@ -52,3 +53,26 @@ TEST(Util, IsPrime) {
     ASSERT_TRUE(util::is_prime(7));
     ASSERT_TRUE(util::is_prime(457));
 }
+
+TEST(Util, NextFalse) {
+    std::vector<bool> example = boost::assign::list_of(true) (false) (true)
+        (false) (true) (true);
+
+    ASSERT_EQ(1, util::next_false(example, 0));
+    ASSERT_EQ(3, util::next_false(example, 2));
+}
+
+TEST(Util, SimpleSieve) {
+    std::set<int> expect = boost::assign::list_of(2) (3) (5) (7) (11) (13) (17)
+        (19) (23) (29) (31) (37) (41) (43) (47) (53) (59) (61) (67) (71) (73)
+        (79) (83) (89) (97) (101) (103) (107) (109) (113);
+    std::set<int> result = util::simple_sieve(120);
+    ASSERT_EQ(expect.size(), result.size());
+    std::set<int>::const_iterator e = expect.begin();
+    for (std::set<int>::const_iterator i = result.begin(); i != result.end(); ++i, ++e) {
+        ASSERT_EQ(*i, *e);
+    }
+
+
+}
+
