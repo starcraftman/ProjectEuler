@@ -86,10 +86,25 @@ std::set<T> find_divisors(T num, bool proper=false) {
 
 template <class T>
 bool is_prime(T num) {
-    return find_divisors(num).size() == 2;
+    if (num <= 3) {
+        return num > 1;
+    }
+
+    if ((num % 2) == 0 || (num % 3) == 0) {
+        return false;
+    }
+
+    T root = std::floor(std::sqrt(num));
+    for (int i = 5; i <= root; i += 6) {
+        if ((num % i) == 0 || (num % (i + 2)) == 0) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
-}
+} /* end util:: */
 
 #endif /* _UTIL_HPP_ */
 
