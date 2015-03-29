@@ -22,7 +22,7 @@ using util::u_long;
 /************** Global Vars & Functions *******************/
 TEST(Euler002, FinalAnswer) {
     const int MAX_FIB = 4000000;
-    util::FibSeries<u_long> fib;
+    util::gens::Fibonacci<u_long> fib;
     u_long sum = 0;
 
     while (fib.number() < MAX_FIB) {

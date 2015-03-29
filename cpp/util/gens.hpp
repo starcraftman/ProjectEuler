@@ -4,26 +4,35 @@
 /********************* Header Files ***********************/
 namespace util {
 
+namespace gens {
+
 /************** Class & Func Declarations *****************/
 /* Starts at Fibonacci number 1. */
 template <class T>
-class FibSeries {
+class Fibonacci {
 public:
-    FibSeries() : two_back(0), one_back(1), num(1) {};
-    FibSeries(T two, T one) : two_back(two), one_back(one), num(1) {};
+    Fibonacci() : two_back(0), one_back(1), num(1), ind(1) {};
+    Fibonacci(T two, T one, T ind) : two_back(two), one_back(one), 
+            num(one + two), ind(ind) {};
     
-    void next() {
+    T next() {
         num = one_back + two_back;
         two_back = one_back;
         one_back = num;
+
+        return num;
     }
 
     T number() { return num; }
+    T index() { return ind; }
 private:
     T two_back;
     T one_back;
     T num;
+    T ind;
 };
+
+} /* end util::gens */
 
 } /* end util:: */
 
