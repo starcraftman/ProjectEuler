@@ -25,62 +25,15 @@ starting with n = 0.
 /********************* Header Files ***********************/
 /* C++ Headers */
 #include <iostream> /* Input/output objects. */
-//#include <fstream> /* File operations. */
-//#include <sstream> /* String stream. */
-#include <string> /* C++ String class. */
-//#include <exception> /* Top level exception header. */
-//#include <stdexcept> /* Some useful common exceptions */
-//#include <new> /* Defines bad_malloc exception, new functions. */
-//#include <memory> /* std smart pointers like unique_ptr */
-//#include <typeinfo> /* Casting header. */
-//#include <limits> /* Inspect properties, numeric_limits<int> iLimit; */
-//#include <numeric> /* Math accumulators & other ops*/
-//#include <functional> /* Function declarations & std::bind */
-
-/* C++11 Only*/
-//#include <chrono> /* std::chrono contains timing for threads */
-//#include <initializer_list> /* Allows class to take list like {1,2} */
-//#include <random> /* Random c++ version */
-//#include <regex>
-//#include <thread>
-//#include <atomic>
-//#include <condition_variable>
-//#include <mutex>
-
-/* STL Headers */
-//#include <vector>
-//#include <list>
-//#include <deque>
-//#include <stack>
-//#include <queue>
-//#include <priority_queue>
-//#include <set> // multiset for multiple keys allowed.
-//#include <map> // multimap for multiple keys allowed.
-//#include <bitset>
-//#include <utility> // Has pair for map, std::swap
 #include <algorithm>
-//#include <iterator> // Contains back_inserter function and like.
-
-/* C Headers */
-//#include <cstdio>
-//#include <cstring>
-//#include <cstdlib> /* atof, rand, malloc... */
-//#include <cstddef> /* size_t, NULL */
-//#include <cstdarg> /* Variable argument functions */
-//#include <cctype> /* Character check functions */
 #include <climits>
-//#include <cassert>
-//#include <cmath>
-//#include <cstdint> /* C++11 only, standard u_int16 & such */
 
 #include <gtest/gtest.h>
 #include "util.hpp"
 
 /**************** Namespace Declarations ******************/
-using std::cin;
 using std::cout;
 using std::endl;
-using std::string;
 
 /***************** Constants & Macros *********************/
 // Worst case: 1000^2 + 1000 * 1000 + 1000
@@ -118,16 +71,16 @@ int find_consec_primes(int a, int b) {
     return count;
 }
 
-TEST(EulerQuads, EulerGeneration) {
+TEST(Euler027, EulerGeneration) {
     ASSERT_EQ(41, euler_val(0, 0, 41));
     ASSERT_EQ(43, euler_val(1, 1, 41));
 }
 
-TEST(EulerQuads, EulerConsecutives) {
+TEST(Euler027, EulerConsecutives) {
     ASSERT_EQ(80, find_consec_primes(-79, 1601));
 }
 
-TEST(EulerQuads, FinalAnswer) {
+TEST(Euler027, FinalAnswer) {
     Result res;
     int num_primes = 0;
     for (int a = -999; a < 1000; ++a) {
