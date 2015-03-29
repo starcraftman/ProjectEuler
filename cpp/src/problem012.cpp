@@ -7,12 +7,13 @@
 #include <string> /* C++ String class. */
 
 /* STL Headers */
-#include <vector>
+#include <set>
 
 /* C Headers */
 #include <cstdlib>
 
-//#include "gtest/gtest.h"
+#include "gtest/gtest.h"
+#include "util.hpp"
 
 /**************** Namespace Declarations ******************/
 using std::cin;
@@ -59,14 +60,6 @@ private:
 };
 
 /************** Global Vars & Functions *******************/
-void find_divisors(long tval, std::vector<int> &v) {
-    for (int i = 1; i <= tval; ++i) {
-        if ((tval % i) == 0) {
-            v.push_back(i);
-        }
-    }
-}
-
 int main(int argc, char **argv) {
     if (argc != 2) {
         cout << "Usage: " << *argv << " <divisors>" << endl;
@@ -78,23 +71,22 @@ int main(int argc, char **argv) {
     unsigned long divisors = std::atol(*argv);
 
     TriangleGenerator tg;
-    std::vector<int> v;
+    std::set<long> divs;
     while (true) {
         tg.next();
         cout << "Triangle number " << tg.index() << " is " << tg.number() << "." << endl;
-        v.clear();
-        find_divisors(tg.number(), v);
-        if (v.size() > divisors) {
+        divs = util::find_divisors(tg.number());
+        if (divs.size() > divisors) {
             break;
         }
     }
 
     cout << "-------" << endl;
     // Print solution.
-    cout << "The triangle number " << tg.number() << " has " << v.size() << " divisors." << endl;
+    cout << "The triangle number " << tg.number() << " has " << divs.size() << " divisors." << endl;
     cout << "The divisors are:" << endl;
     int line_so_far = 0;
-    for (std::vector<int>::const_iterator itr = v.begin(); itr != v.end(); ++itr) {
+    for (std::set<long>::const_iterator itr = divs.begin(); itr != divs.end(); ++itr) {
         cout << *itr << ",";
         line_so_far++;
         if ((line_so_far % 25) == 0) {
