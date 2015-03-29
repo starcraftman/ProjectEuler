@@ -76,6 +76,18 @@ T next_false(std::vector<bool> const & sieve, T start_index) {
     return -1;
 }
 
+template <class T>
+T pow(T base, int exp) {
+    if (exp == 1) {
+        return base;
+    } else if ((exp % 2) == 0) {
+        T temp = pow(base, exp/2);
+        return temp * temp;
+    } else {
+        T temp = pow(base, (exp - 1)/2);
+        return temp * temp * base;
+    }
+}
 /* Return all primes under max. */
 template <class T>
 std::vector<T> simple_sieve(T max) {
