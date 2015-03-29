@@ -161,8 +161,3 @@ TEST(Euler023, FinalAnswer) {
     cout << "The sum was: " << sum << endl;
 }
 
-/* Notes:
- * Force call to use another version of virtual function: baseP->Item_base::net_price(42);
- *
- */
-

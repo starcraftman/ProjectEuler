@@ -1,14 +1,15 @@
 /**
- * Template C++ file.
- * Function with references to pointers: func(int *&ptr);
+n! means n × (n − 1) × ... × 3 × 2 × 1
+
+For example, 10! = 10 × 9 × ... × 3 × 2 × 1 = 3628800,
+and the sum of the digits in the number 10! is 3 + 6 + 2 + 8 + 8 + 0 + 0 = 27.
+
+Find the sum of the digits in the number 100!
  */
 /********************* Header Files ***********************/
-/* C++ Headers */
 #include <iostream> /* Input/output objects. */
 #include <sstream>
 #include <string> /* C++ String class. */
-
-/* C Headers */
 #include <cstdlib>
 
 #include "boost/multiprecision/cpp_int.hpp"
@@ -49,10 +50,4 @@ int main() {
 
     return 0;
 }
-
-
-/* Notes:
- * Force call to use another version of virtual function: baseP->Item_base::net_price(42);
- *
- */
 

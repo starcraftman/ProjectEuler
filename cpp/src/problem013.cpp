@@ -1,5 +1,5 @@
 /**
- * Find first triangle number with over 500 divisors.
+ * Sum 50 big int numbesrs & return first 10 digits.
  */
 /********************* Header Files ***********************/
 /* C++ Headers */
@@ -18,9 +18,6 @@ using std::endl;
 using std::string;
 
 static const char *INPUT = "./src/input_e013.txt";
-
-/****************** Class Definitions *********************/
-
 
 /************** Global Vars & Functions *******************/
 TEST(Euler013, LoadBigInt) {
@@ -63,7 +60,8 @@ TEST(Euler013, SumNumbers) {
     ASSERT_STREQ(first.c_str(), expect);
 
     cout << "First 10 digits: ";
-    for (std::string::const_iterator itr = first.begin(); itr != first.begin() + 10; ++itr) {
+    for (std::string::const_iterator itr = first.begin();
+            itr != first.begin() + 10; ++itr) {
         cout << *itr;
     }
     cout << endl;
