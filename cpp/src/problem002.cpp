@@ -32,7 +32,7 @@ TEST(Euler002, FinalAnswer) {
         }
     }
 
-	cout << "Sum of even fibonacci numbers under " << MAX_FIB
+    cout << "Sum of even fibonacci numbers under " << MAX_FIB
         << " is " << sum << endl;
 
     ASSERT_EQ(4613732, sum);
