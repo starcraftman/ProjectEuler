@@ -6,7 +6,7 @@
 #include <iostream> /* Input/output objects. */
 
 /* STL Headers */
-#include <set>
+#include <vector>
 
 /* C Headers */
 #include <cstdlib>
@@ -68,7 +68,7 @@ int main(int argc, char **argv) {
     unsigned long divisors = std::atol(*argv);
 
     TriangleGenerator tg;
-    std::set<long> divs;
+    std::vector<long> divs;
     while (true) {
         tg.next();
         cout << "Triangle number " << tg.index() << " is " << tg.number() << "." << endl;
@@ -83,7 +83,7 @@ int main(int argc, char **argv) {
     cout << "The triangle number " << tg.number() << " has " << divs.size() << " divisors." << endl;
     cout << "The divisors are:" << endl;
     int line_so_far = 0;
-    for (std::set<long>::const_iterator itr = divs.begin(); itr != divs.end(); ++itr) {
+    for (std::vector<long>::const_iterator itr = divs.begin(); itr != divs.end(); ++itr) {
         cout << *itr << ",";
         line_so_far++;
         if ((line_so_far % 25) == 0) {

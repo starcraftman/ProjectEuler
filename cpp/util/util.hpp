@@ -122,7 +122,7 @@ std::vector<T> simple_sieve(T max) {
 }
 
 template <class T>
-std::set<T> find_divisors(T num, bool proper=false) {
+std::vector<T> find_divisors(T num, bool proper=false) {
     std::set<T> res;
     T root = std::floor(std::sqrt(num));
 
@@ -137,7 +137,8 @@ std::set<T> find_divisors(T num, bool proper=false) {
         res.erase(num);
     }
 
-    return res;
+    std::vector<T> vec(res.begin(), res.end());
+    return vec;
 }
 
 template <class T>
