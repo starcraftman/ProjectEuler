@@ -4,7 +4,6 @@
 /********************* Header Files ***********************/
 /* C++ Headers */
 #include <iostream> /* Input/output objects. */
-#include <string> /* C++ String class. */
 
 /* STL Headers */
 #include <set>
@@ -16,10 +15,8 @@
 #include "util.hpp"
 
 /**************** Namespace Declarations ******************/
-using std::cin;
 using std::cout;
 using std::endl;
-using std::string;
 
 /****************** Class Definitions *********************/
 class TriangleGenerator {
