@@ -78,7 +78,11 @@ T next_false(std::vector<bool> const & sieve, T start_index) {
 
 template <class T>
 T pow(T base, int exp) {
-    if (exp == 1) {
+    if (exp < 0) {
+        return 1 / pow(base, -1 * exp);;
+    } else if (exp == 0) {
+        return 1;
+    } else if (exp == 1) {
         return base;
     } else if ((exp % 2) == 0) {
         T temp = pow(base, exp/2);
