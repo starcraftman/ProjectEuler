@@ -57,23 +57,15 @@ private:
 };
 
 /************** Global Vars & Functions *******************/
-int main(int argc, char **argv) {
-    if (argc != 2) {
-        cout << "Usage: " << *argv << " <divisors>" << endl;
-        cout << "Where <divisors> is the number of divisors the triangle should have." << endl;
-        return 1;
-    }
-
-    ++argv;
-    unsigned long divisors = std::atol(*argv);
-
+int main(void) {
+    const long num_divisors = 500;
     TriangleGenerator tg;
     std::vector<long> divs;
     while (true) {
         tg.next();
-        cout << "Triangle number " << tg.index() << " is " << tg.number() << "." << endl;
+        //cout << "Triangle number " << tg.index() << " is " << tg.number() << "." << endl;
         divs = util::find_divisors(tg.number());
-        if (divs.size() > divisors) {
+        if (divs.size() > num_divisors) {
             break;
         }
     }
