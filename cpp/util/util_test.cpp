@@ -30,11 +30,6 @@ using std::string;
 
 
 /************** Global Vars & Functions *******************/
-TEST(Util, Placeholder) {
-    util::u_long num(88);
-    ASSERT_EQ(88, num);
-}
-
 TEST(Util, FindDivisors) {
     std::vector<util::u_int> res, expect = boost::assign::list_of(1) (2) (4) (5)
         (10) (20) (25) (50) (100);
