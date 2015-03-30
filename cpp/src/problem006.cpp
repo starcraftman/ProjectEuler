@@ -54,7 +54,7 @@ TEST(Euler006, SquareOfSum) {
 	ASSERT_EQ(3025, square_of_sum(10));
 }
 
-TEST(Euler005, FinalAnswer) {
+TEST(Euler006, FinalAnswer) {
 	u_long difference = square_of_sum(100) - sum_of_squares(100);
 
 	cout << "The difference is: " << difference << endl;
