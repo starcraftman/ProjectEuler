@@ -31,7 +31,7 @@ big_int pow(big_int &base, int exp) {
     }
 }
 
-TEST(Euler026, TestPowerFunc) {
+TEST(Euler029, TestPowerFunc) {
     big_int base(2);
 
     ASSERT_EQ(2, pow(base, 1));
@@ -42,7 +42,7 @@ TEST(Euler026, TestPowerFunc) {
     ASSERT_EQ(2048 * 8, pow(base, 14));
 }
 
-TEST(Euler026, DistinctSequence) {
+TEST(Euler029, DistinctSequence) {
     std::set<big_int> collect;
 
     for (int i = 2; i <= 100; ++i) {
