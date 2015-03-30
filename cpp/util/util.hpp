@@ -92,6 +92,7 @@ T pow(T base, int exp) {
         return temp * temp * base;
     }
 }
+
 /* Return all primes under max. */
 template <class T>
 std::vector<T> simple_sieve(T max) {
