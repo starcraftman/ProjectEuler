@@ -1,5 +1,8 @@
 /**
- * Sum 50 big int numbesrs & return first 10 digits.
+Work out the first ten digits of the sum of the following
+oone-hundred 50-digit numbers.
+
+Digits read from INPUT
  */
 /********************* Header Files ***********************/
 /* C++ Headers */
@@ -40,8 +43,7 @@ TEST(Euler013, ReadIntFromFile) {
     ASSERT_STREQ(ss.str().c_str(), expect);
 }
 
-TEST(Euler013, SumNumbers) {
-    const char *expect = "5537376230390876637302048746832985971773659831892672";
+TEST(Euler013, FinalAnswer) {
     std::ifstream input(INPUT);
     std::string line;
 
@@ -52,17 +54,16 @@ TEST(Euler013, SumNumbers) {
         boost::multiprecision::cpp_int temp(line);
         counter += temp;
     }
-    cout << "Full sum: " <<  counter << endl;
 
-    std::stringstream ss;
+    std::stringstream ss, ss10;
     ss << counter;
-    std::string first = ss.str();
-    ASSERT_STREQ(first.c_str(), expect);
-
-    cout << "First 10 digits: ";
-    for (std::string::const_iterator itr = first.begin();
-            itr != first.begin() + 10; ++itr) {
-        cout << *itr;
+    std::string full = ss.str();
+    for (std::string::const_iterator itr = ss.str().begin();
+            itr != ss.str().begin() + 10; ++itr) {
+        ss10 << *itr;
     }
-    cout << endl;
+
+    cout << "Full sum: " << counter << endl;
+    cout << "First 10 digits: " << ss10.str() << endl;
+    ASSERT_STREQ("5537376230", ss10.str().c_str());
 }

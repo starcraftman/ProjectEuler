@@ -311,7 +311,7 @@ TEST(Euler017, FinalAnswer) {
         count += count_chars(words);
     }
 
-    ASSERT_EQ(count, 21124);
     cout << "The number of characters is: " << count << endl;
+    ASSERT_EQ(count, 21124);
 }
 

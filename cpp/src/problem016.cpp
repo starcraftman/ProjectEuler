@@ -10,6 +10,7 @@ What is the sum of the digits of the number 2^1000?
 #include <cstdlib> /* atof, rand, malloc... */
 
 #include "boost/multiprecision/cpp_int.hpp"
+#include "gtest/gtest.h"
 
 /**************** Namespace Declarations ******************/
 using std::cout;
@@ -17,8 +18,7 @@ using std::endl;
 namespace multi = boost::multiprecision;
 
 /************** Global Vars & Functions *******************/
-/* Simple boost solution */
-int main(void) {
+TEST(Euler016, FinalAnswer) {
     multi::cpp_int base(2);
 
     for (int i = 1; i < 1000; ++i) {
@@ -29,16 +29,14 @@ int main(void) {
     ss << base;
     std::string n_str = base.str();
 
-    cout << "Result of 2^1000 is : " << endl << n_str << endl << endl;
-
     int sum = 0;
     for (std::string::const_iterator itr = n_str.begin(); itr != n_str.end(); ++itr) {
         char val = *itr;
         sum += std::atoi(&val);
     }
 
+    cout << "Result of 2^1000 is : " << endl << n_str << endl << endl;
     cout << "Sum of those digits is: " << sum << endl;
-
-    return 0;
+    ASSERT_EQ(1366, sum);
 }
 
