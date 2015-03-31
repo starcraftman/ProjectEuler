@@ -74,14 +74,18 @@ TEST(Euler032, IsPanDigital) {
 // to say that i & j can't be more than 4 digits either, since 1 * 4 = 4 and
 // 1 + 4 + 4 = 9 digits.
 //
-// * 1 not considered, since 1 * n = n, missing digits.
+// * So possible combinations are 1 4 4, 2 3 4 (digits).
 //
+// Starting Val i:
+// * 1 not considered, since 1 * n = n, missing digits.
 // * 2 not considered, since 2 * n = 2n. Impossible to have the 5 odds.
+//
+// * Highest val then, is 9999/3 = 3333. Must be less 3000 since can't have 2 3s.
 TEST(Euler032, FinalAnswer) {
     u_long sum = 0;
     std::set<u_long> products;
-    for (int i = 3; i < 2000; ++i) {
-        for (int j = 3; j < 2000; ++j) {
+    for (int i = 3; i < 2987; ++i) {
+        for (int j = 3; j < 2997; ++j) {
             u_long prod = i * j;
             if (prod > 9999) {
                 break;
