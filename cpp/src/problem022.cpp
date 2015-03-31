@@ -23,7 +23,6 @@ What is the total of all the name scores in the file?
 #include "gtest/gtest.h"
 
 /**************** Namespace Declarations ******************/
-using std::cin;
 using std::cout;
 using std::endl;
 using std::string;

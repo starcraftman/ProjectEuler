@@ -13,7 +13,6 @@ Evaluate the sum of all the amicable numbers under 10000.
 /********************* Header Files ***********************/
 /* C++ Headers */
 #include <iostream> /* Input/output objects. */
-#include <string> /* C++ String class. */
 #include <vector>
 
 /* Local */
@@ -21,10 +20,8 @@ Evaluate the sum of all the amicable numbers under 10000.
 #include "boost/assign/list_of.hpp"
 
 /**************** Namespace Declarations ******************/
-using std::cin;
 using std::cout;
 using std::endl;
-using std::string;
 
 /************** Class *******************/
 class AmicableNumbers {

@@ -20,7 +20,6 @@ with British usage.
 #include "gtest/gtest.h"
 
 /**************** Namespace Declarations ******************/
-using std::cin;
 using std::cout;
 using std::endl;
 using std::string;

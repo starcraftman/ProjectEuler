@@ -10,10 +10,8 @@ Find all distinct numbers of form: a**b for:
 #include "boost/multiprecision/cpp_int.hpp"
 
 /**************** Namespace Declarations ******************/
-using std::cin;
 using std::cout;
 using std::endl;
-using std::string;
 
 /******************* Type Definitions *********************/
 typedef boost::multiprecision::cpp_int big_int;

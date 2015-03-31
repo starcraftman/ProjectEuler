@@ -15,7 +15,6 @@ Digits read from INPUT
 #include "boost/multiprecision/cpp_int.hpp"
 
 /**************** Namespace Declarations ******************/
-using std::cin;
 using std::cout;
 using std::endl;
 using std::string;
