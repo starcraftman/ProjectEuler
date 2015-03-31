@@ -52,6 +52,11 @@ build() {
 
 shopt -s extglob # for +()
 
+if [ "$#" -eq 0 ]; then
+  usage
+  exit
+fi
+
 while (( $# > 0 )); do
   arg="$1"
   shift
