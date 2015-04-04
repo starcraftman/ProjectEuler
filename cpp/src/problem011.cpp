@@ -352,7 +352,7 @@ TEST(Euler011, FinalAnswer) {
         delete *i;
     }
 
-    cout << biggest << endl;
+    cout << "The biggest product is: " << biggest << endl;
     ASSERT_EQ(70600674, biggest.product);
 }
 
