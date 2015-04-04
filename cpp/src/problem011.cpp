@@ -186,7 +186,6 @@ public:
         for (grid_ind i = cur_row; i < cur_row + Vals::MAX; ++i) {
             res.append(grid.rows[i][cur_col]);
         }
-        cout << res << endl;
 
         return res;
     }
@@ -243,6 +242,6 @@ TEST(Euler011, ColumnScanner) {
         }
     }
 
-    ASSERT_EQ(0, biggest.product);
+    ASSERT_EQ(51267216, biggest.product);
 }
 
