@@ -124,6 +124,7 @@ public:
 class Scanner {
 public:
     Scanner(const Grid &grid) : grid(grid) , cur_row(0), cur_col(0) {}
+    virtual	~Scanner() {};
     virtual bool has_next() = 0;
     virtual bool next() = 0;
     virtual Vals vals() = 0;
@@ -140,7 +141,6 @@ public:
     bool has_next() {
         return cur_row != grid.nrows;
     }
-
     bool next() {
         if (cur_col + Vals::MAX == grid.ncols) {
             cur_row += 1;
@@ -150,7 +150,6 @@ public:
 
         return has_next();
     }
-
     Vals vals() {
         Vals res;
 
@@ -169,7 +168,6 @@ public:
     bool has_next() {
         return cur_col != grid.ncols;
     }
-
     bool next() {
         if (cur_row + Vals::MAX == grid.nrows) {
             cur_col += 1;
@@ -179,7 +177,6 @@ public:
 
         return has_next();
     }
-
     Vals vals() {
         Vals res;
 
@@ -191,6 +188,59 @@ public:
     }
 };
 
+class LRDiagScanner : public Scanner {
+public:
+    LRDiagScanner(const Grid &grid) : Scanner(grid) { cur_row = -1; };
+
+    bool has_next() {
+        return cur_col != (grid.ncols - Vals::MAX + 1);
+    }
+    bool next() {
+        if (cur_row + Vals::MAX == grid.nrows) {
+            cur_col += 1;
+            cur_row = -1;
+        }
+        cur_row++;
+
+        return has_next();
+    }
+    Vals vals() {
+        Vals res;
+
+        for (grid_ind i = 0; i < Vals::MAX; ++i) {
+            res.append(grid.rows[cur_row + i][cur_col + i]);
+        }
+
+        return res;
+    }
+};
+
+class RLDiagScanner : public Scanner {
+public:
+    RLDiagScanner(const Grid &grid) : Scanner(grid) { cur_row = 2; };
+
+    bool has_next() {
+        return cur_col != (grid.ncols - Vals::MAX + 1);
+    }
+    bool next() {
+        if (cur_row == (grid.nrows - 1)) {
+            cur_col += 1;
+            cur_row = 2;
+        }
+        cur_row++;
+
+        return has_next();
+    }
+    Vals vals() {
+        Vals res;
+
+        for (grid_ind i = 0; i < Vals::MAX; ++i) {
+            res.append(grid.rows[cur_row - i][cur_col + i]);
+        }
+
+        return res;
+    }
+};
 /************** Global Vars & Functions *******************/
 TEST(Euler011, Vals) {
     Vals v;
@@ -243,5 +293,66 @@ TEST(Euler011, ColumnScanner) {
     }
 
     ASSERT_EQ(51267216, biggest.product);
+}
+
+TEST(Euler011, LRDiagonalScanner) {
+    Grid grid(INPUT, 20, 20);
+    LRDiagScanner scan(grid);
+
+    Vals biggest;
+    while (scan.next()) {
+        Vals temp = scan.vals();
+        if (temp > biggest) {
+            biggest = temp;
+            cout << temp << endl;
+        }
+    }
+
+    ASSERT_EQ(40304286, biggest.product);
+}
+
+TEST(Euler011, RLDiagonalScanner) {
+    Grid grid(INPUT, 20, 20);
+    RLDiagScanner scan(grid);
+
+    Vals biggest;
+    while (scan.next()) {
+        Vals temp = scan.vals();
+        if (temp > biggest) {
+            biggest = temp;
+            cout << temp << endl;
+        }
+    }
+
+    ASSERT_EQ(70600674, biggest.product);
+}
+
+TEST(Euler011, FinalAnswer) {
+    typedef std::vector<Scanner *> scan_v_t;;
+    Grid grid(INPUT, 20, 20);
+    Vals temp, biggest;
+    scan_v_t scanners;
+
+    scanners.push_back(new RowScanner(grid));
+    scanners.push_back(new ColScanner(grid));
+    scanners.push_back(new LRDiagScanner(grid));
+    scanners.push_back(new RLDiagScanner(grid));
+
+    for (scan_v_t::const_iterator i = scanners.begin();
+            i != scanners.end(); ++i) {
+        Scanner * const scan = *i;
+
+        while (scan->next()) {
+            temp = scan->vals();
+            if (temp > biggest) {
+                biggest = temp;
+            }
+        }
+
+        delete *i;
+    }
+
+    cout << biggest << endl;
+    ASSERT_EQ(70600674, biggest.product);
 }
 
