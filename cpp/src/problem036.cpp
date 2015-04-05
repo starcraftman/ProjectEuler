@@ -50,7 +50,7 @@ bool is_palindrome(const char * const word) {
 std::string to_base(u_int val, u_int base) {
     std::string new_val;
     while (val != 0) {
-        new_val = char('0' + (val % base)) + dec;
+        new_val = char('0' + (val % base)) + new_val;
         val /= base;
     }
 
