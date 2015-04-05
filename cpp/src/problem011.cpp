@@ -38,6 +38,7 @@ direction (up, down, left, right, or diagonally) in the 20×20 grid?
 #include <algorithm>
 #include <exception>
 
+#include "boost/smart_ptr/shared_ptr.hpp"
 #include "gtest/gtest.h"
 #include "util.hpp"
 
@@ -328,19 +329,24 @@ TEST(Euler011, RLDiagonalScanner) {
 }
 
 TEST(Euler011, FinalAnswer) {
-    typedef std::vector<Scanner *> scan_v_t;;
+    typedef boost::shared_ptr<Scanner> scan_ptr;
+    typedef std::vector<scan_ptr> scan_v_t;;
     Grid grid(INPUT, 20, 20);
     Vals temp, biggest;
     scan_v_t scanners;
 
-    scanners.push_back(new RowScanner(grid));
-    scanners.push_back(new ColScanner(grid));
-    scanners.push_back(new LRDiagScanner(grid));
-    scanners.push_back(new RLDiagScanner(grid));
+    scanners.push_back(scan_ptr(new RowScanner(grid)));
+    scanners.push_back(scan_ptr(new ColScanner(grid)));
+    scanners.push_back(scan_ptr(new LRDiagScanner(grid)));
+    scanners.push_back(scan_ptr(new RLDiagScanner(grid)));
+    //scanners.push_back(new RowScanner(grid));
+    //scanners.push_back(new ColScanner(grid));
+    //scanners.push_back(new LRDiagScanner(grid));
+    //scanners.push_back(new RLDiagScanner(grid));
 
-    for (scan_v_t::const_iterator i = scanners.begin();
-            i != scanners.end(); ++i) {
-        Scanner * const scan = *i;
+    for (scan_v_t::const_iterator ptr = scanners.begin();
+            ptr != scanners.end(); ++ptr) {
+        Scanner *scan = ptr->get();
 
         while (scan->next()) {
             temp = scan->vals();
@@ -348,8 +354,6 @@ TEST(Euler011, FinalAnswer) {
                 biggest = temp;
             }
         }
-
-        delete *i;
     }
 
     cout << "The biggest product is: " << biggest << endl;
