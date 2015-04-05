@@ -40,9 +40,18 @@ build() {
 
   pushd "$BDIR"
   if [ ! -f "$BDIR/CMakeCache.txt" ]; then
-    cmake $CMAKE_OPTS ..
+    if type -t 'ninja' > /dev/null 2>&1; then
+      cmake -G "Ninja" $CMAKE_OPTS ..
+    else
+      cmake -G "Unix Makefiles" $CMAKE_OPTS ..
+    fi
   fi
-  make -j
+
+  if type -t 'ninja' > /dev/null 2>&1; then
+    ninja
+  else
+    make -j
+  fi
   popd
 
   BUILT=1
