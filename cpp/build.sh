@@ -8,6 +8,7 @@ BUILT=0
 usage() {
   echo "Builds the project. Takes optional args:
   clean  : Remove build dir.
+  prof   : Compile with profiling enabled (slower).
   lib    : Build & run lib tests.
   travis : Run tests.
   *      : Problem number, build & run that problem. i.e. 22 -> run problem 22"
