@@ -26,11 +26,12 @@ using util::u_int;
 /************** Global Vars & Functions *******************/
 bool is_palindrome(const std::string &word) {
     // For this problem. leading zeroes don't count
-    if (word.at(0) == '0' || word.at(word.length()-1) == '0') {
+    if (word.at(0) == '0' || word.at(word.length() - 1) == '0') {
         return false;
     }
 
-    std::string::const_iterator front = word.begin(), end = word.end()-1;
+    std::string::const_iterator front = word.begin();
+    std::string::const_iterator end = word.end() - 1;
     while (front < end) {
         if (*front != *end) {
             return false;
@@ -57,7 +58,7 @@ std::string to_base(u_int val, u_int base) {
     return new_val;
 }
 
-bool check_both_bases(u_int val) {
+bool both_bases_palindrome(u_int val) {
     if ((val % 10) == 0) {
         return false;
     }
@@ -86,7 +87,7 @@ TEST(Euler036, FinalAnswer) {
     u_int sum = 0;
 
     for (u_int i = 1; i < 1000000; ++i) {
-        if (check_both_bases(i)) {
+        if (both_bases_palindrome(i)) {
             sum += i;
         }
     }
