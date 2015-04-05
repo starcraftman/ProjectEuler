@@ -4,7 +4,6 @@
 ROOT="$(readlink -f $(dirname $0))"
 BDIR="$ROOT/gen"
 BUILT=0
-CMAKE_OPTS=
 
 usage() {
   echo "Builds the project. Takes optional args:
@@ -21,9 +20,8 @@ clean() {
 }
 
 travis_tests() {
-  # Ignore it for now
-  GLOBIGNORE=$BDIR/src/Euler012*
-
+  # If want to ignore some tests, use below
+  #GLOBIGNORE=$BDIR/src/Euler012*
   TESTS=( "$BDIR/src/Euler"* )
   for tcase in "${TESTS[@]}"; do
     "$tcase"
@@ -36,7 +34,7 @@ build() {
   fi
 
   if [ "$(uname -s)" == "Linux" -a ! -d ./libs/lib ]; then
-    echo "Warning, libs doesn't exists. Run GetLibsI.py"
+    echo "Warning, libs doesn't exists. Run bootstrap.sh"
     exit
   fi
 
@@ -70,7 +68,7 @@ while (( $# > 0 )); do
       clean
       ;;
     prof*)
-      CMAKE_OPTS+="-DGPROF=ON "
+      CMAKE_OPTS+="-D GPROF=ON "
       ;;
     lib)
       build
