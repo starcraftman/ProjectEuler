@@ -22,19 +22,24 @@ using std::cout;
 using std::endl;
 using std::string;
 using util::u_int;
-using util::pow;
 
 /************** Global Vars & Functions *******************/
 bool is_palindrome(std::string &word) {
-    std::string rev(word);
-    std::reverse(rev.begin(), rev.end());
-
     // For this problem. leading zeroes don't count
-    if (word.at(0) == '0' || rev.at(0) == '0') {
+    if (word.at(0) == '0' || word.at(word.length()-1) == '0') {
         return false;
     }
 
-    return word == rev;
+    std::string::const_iterator front = word.begin(), end = word.end()-1;
+    while (front < end) {
+        if (*front != *end) {
+            return false;
+        }
+        front++;
+        end--;
+    }
+
+    return true;
 }
 
 bool is_palindrome(const char * const word) {
@@ -42,30 +47,28 @@ bool is_palindrome(const char * const word) {
     return is_palindrome(str_word);
 }
 
-std::string to_dec(u_int val) {
-    std::stringstream dec;
-    dec << val;
-    return dec.str();
-}
-
-std::string to_bin(u_int val) {
-    std::stringstream bin;
-
+std::string to_base(u_int val, u_int base) {
+    std::string new_val;
     while (val != 0) {
-        bin << val % 2;
-        val /= 2;
+        new_val = char('0' + (val % base)) + dec;
+        val /= base;
     }
 
-    std::string rev(bin.str());
-    std::reverse(rev.begin(), rev.end());
-    return rev;
+    return new_val;
 }
 
 bool check_both_bases(u_int val) {
-    std::string dec = to_dec(val);
-    std::string bin = to_bin(val);
+    if ((val % 10) == 0) {
+        return false;
+    }
 
-    return is_palindrome(dec) && is_palindrome(bin);
+    std::string dec = to_base(val, 10);
+    if (!is_palindrome(dec)) {
+        return false;
+    }
+
+    std::string bin = to_base(val, 2);
+    return is_palindrome(bin);
 }
 
 TEST(Euler036, IsPalindrome) {
@@ -75,8 +78,8 @@ TEST(Euler036, IsPalindrome) {
 }
 
 TEST(Euler036, Conversions) {
-    ASSERT_STREQ("1234", to_dec(1234).c_str());
-    ASSERT_STREQ("1010", to_bin(10).c_str());
+    ASSERT_STREQ("1234", to_base(1234, 10).c_str());
+    ASSERT_STREQ("1010", to_base(10, 2).c_str());
 }
 
 TEST(Euler036, FinalAnswer) {
