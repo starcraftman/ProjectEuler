@@ -24,7 +24,7 @@ using std::string;
 using util::u_int;
 
 /************** Global Vars & Functions *******************/
-bool is_palindrome(std::string &word) {
+bool is_palindrome(const std::string &word) {
     // For this problem. leading zeroes don't count
     if (word.at(0) == '0' || word.at(word.length()-1) == '0') {
         return false;
@@ -50,7 +50,7 @@ bool is_palindrome(const char * const word) {
 std::string to_base(u_int val, u_int base) {
     std::string new_val;
     while (val != 0) {
-        new_val = char('0' + (val % base)) + new_val;
+        new_val.insert(new_val.begin(), 1, '0' + (val % base));
         val /= base;
     }
 
