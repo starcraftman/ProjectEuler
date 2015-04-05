@@ -42,7 +42,7 @@ build() {
   if [ ! -f "$BDIR/CMakeCache.txt" ]; then
     cmake $CMAKE_OPTS ..
   fi
-  make
+  make -j
   popd
 
   BUILT=1
