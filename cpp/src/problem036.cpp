@@ -82,7 +82,7 @@ TEST(Euler036, Conversions) {
 TEST(Euler036, FinalAnswer) {
     u_int sum = 0;
 
-    for (u_int i = 0; i < 1000000; ++i) {
+    for (u_int i = 1; i < 1000000; ++i) {
         if (check_both_bases(i)) {
             sum += i;
         }

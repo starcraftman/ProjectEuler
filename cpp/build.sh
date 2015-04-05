@@ -4,6 +4,7 @@
 ROOT="$(readlink -f $(dirname $0))"
 BDIR="$ROOT/gen"
 BUILT=0
+CMAKE_OPTS=
 
 usage() {
   echo "Builds the project. Takes optional args:
@@ -41,7 +42,7 @@ build() {
 
   pushd "$BDIR"
   if [ ! -f "$BDIR/CMakeCache.txt" ]; then
-    cmake ..
+    cmake $CMAKE_OPTS ..
   fi
   make
   popd
@@ -67,6 +68,9 @@ while (( $# > 0 )); do
       ;;
     clean)
       clean
+      ;;
+    prof*)
+      CMAKE_OPTS+="-DGPROF=ON "
       ;;
     lib)
       build
