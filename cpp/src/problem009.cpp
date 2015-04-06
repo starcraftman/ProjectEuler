@@ -20,11 +20,11 @@ using std::endl;
 
 /************** Global Vars & Functions *******************/
 bool is_pythagorean_triplet(int a, int b, int c) {
-	if (a > c || b > c) {
-		return false;
-    }
+   if (a > c || b > c) {
+      return false;
+   }
 
-    return (a * a + b * b) == c * c;
+   return (a * a + b * b) == c * c;
 }
 
 TEST(Euler009, IsTriplet) {
@@ -37,20 +37,20 @@ TEST(Euler009, FinalAnswer) {
     int product = 0;
     const int max = 1000;
 
-    for (int a = 1; a < max; ++a) {
-        int bmax = max - a;
-	for (int b = a; b < bmax; ++b) {
-	    for (int c = b + 1; c < bmax; ++c) {
-		if (is_pythagorean_triplet(a, b, c) && ((a + b + c) == 1000)) {
-		    product = a * b * c;
-                    cout << "The triplet " << a << " " << b << " " << c
-                        << " has product " << product << endl;
-                    break;
-		}
-	    }
-        }
-    }
+   for (int a = 1; a < max; ++a) {
+   int bmax = max - a;
+      for (int b = a; b < bmax; ++b) {
+         for (int c = b + 1; c < bmax; ++c) {
+            if (is_pythagorean_triplet(a, b, c) && ((a + b + c) == 1000)) {
+               product = a * b * c;
+               cout << "The triplet " << a << " " << b << " " << c
+                  << " has product " << product << endl;
+               break;
+            }
+         }
+      }
+   }
 
-    ASSERT_EQ(31875000, product);
+   ASSERT_EQ(31875000, product);
 }
 
