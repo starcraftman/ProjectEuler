@@ -27,7 +27,7 @@ using util::u_int;
 class Truncatables {
 public:
     Truncatables(u_int max) {
-        primes = util::simple_sieve(max);
+        primes = util::sieve_erat(max);
     };
 
     bool is_prime(u_int num) {

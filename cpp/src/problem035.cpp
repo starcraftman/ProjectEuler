@@ -21,7 +21,7 @@ using std::endl;
 
 /***************** constants & macros *********************/
 static const int MAX_PRIME = 1000000;
-static const std::vector<int> primes = util::simple_sieve(MAX_PRIME);
+static const std::vector<int> primes = util::sieve_erat(MAX_PRIME);
 
 /************** global vars & functions *******************/
 bool is_prime(int num) {

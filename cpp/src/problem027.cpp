@@ -38,7 +38,7 @@ using std::endl;
 /***************** Constants & Macros *********************/
 // Worst case: 1000^2 + 1000 * 1000 + 1000
 static const util::u_long PRIME_MAX = 2001000;
-static const std::vector<util::u_long> primes = util::simple_sieve(PRIME_MAX);
+static const std::vector<util::u_long> primes = util::sieve_erat(PRIME_MAX);
 
 /****************** Class Definitions *********************/
 class Result {

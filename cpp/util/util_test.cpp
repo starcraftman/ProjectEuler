@@ -66,7 +66,7 @@ TEST(Util, SieveErat) {
     std::vector<int> expect = boost::assign::list_of(2) (3) (5) (7) (11) (13) (17)
         (19) (23) (29) (31) (37) (41) (43) (47) (53) (59) (61) (67) (71) (73)
         (79) (83) (89) (97) (101) (103) (107) (109) (113);
-    std::vector<int> result = util::simple_sieve(120);
+    std::vector<int> result = util::sieve_erat(120);
     ASSERT_EQ(expect.size(), result.size());
     std::vector<int>::const_iterator e = expect.begin();
     for (std::vector<int>::const_iterator i = result.begin(); i != result.end(); ++i, ++e) {

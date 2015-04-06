@@ -48,7 +48,7 @@ T pow(T base, int exp) {
 
 /* Return all primes under max. */
 template <class T>
-std::vector<T> simple_sieve(T max) {
+std::vector<T> sieve_erat(T max) {
     std::vector<T> res;
 
     // Ignore 1 & 0

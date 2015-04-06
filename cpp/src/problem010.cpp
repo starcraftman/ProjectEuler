@@ -19,7 +19,7 @@ using util::u_long;
 /************** Global Vars & Functions *******************/
 TEST(Euler010, FinalAnswer) {
 	u_long sum = 0;
-	std::vector<u_long> primes = util::simple_sieve(2000000UL);
+	std::vector<u_long> primes = util::sieve_erat(2000000UL);
 	for (std::vector<u_long>::const_iterator i = primes.begin();
 			i != primes.end(); ++i) {
 		sum += *i;

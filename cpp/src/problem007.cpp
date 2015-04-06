@@ -17,7 +17,7 @@ using std::endl;
 
 /************** Global Vars & Functions *******************/
 TEST(Euler007, FinalAnswer) {
-	std::vector<int> primes = util::simple_sieve(1000000);
+	std::vector<int> primes = util::sieve_erat(1000000);
 	int prime = primes[10001-1];
 
 	cout << "The prime is: " << prime << endl;
