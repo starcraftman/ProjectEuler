@@ -22,14 +22,9 @@ NOTE: 2, 3, 5, and 7 are not considered to be truncatable primes.
 #include "util.hpp"
 
 /**************** Namespace Declarations ******************/
-using std::cin;
 using std::cout;
 using std::endl;
-using std::string;
 using util::u_int;
-
-/***************** Constants & Macros *********************/
-
 
 /****************** Class Definitions *********************/
 class Truncatables {
