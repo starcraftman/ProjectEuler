@@ -3,8 +3,8 @@
 
 /********************* Header Files ***********************/
 #include <iostream>
+#include <set>
 #include <vector>
-#include <algorithm>
 #include <cmath>
 
 namespace util {
@@ -74,25 +74,21 @@ std::vector<T> sieve_erat(T max) {
 
 template <class T>
 std::vector<T> find_divisors(T num, bool proper=false) {
-    std::vector<T> divs;
+    std::set<T> divs;
     T root = std::floor(std::sqrt(num));
 
     for (int i = 1; i <= root; ++i) {
         if ((num % i) == 0) {
-            divs.push_back(i);
-            T pair = num / i;
-            if (pair > root) {
-                divs.push_back(pair);
-            }
+            divs.insert(i);
+            divs.insert(num / i);
         }
     }
 
-    std::sort(divs.begin(), divs.end());
     if (proper) {
-        divs.erase(divs.end() - 1);
+        divs.erase(num);
     }
 
-    return divs;
+    return std::vector<T>(divs.begin(), divs.end());
 }
 
 template <class T>
