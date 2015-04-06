@@ -23,10 +23,17 @@ clean() {
 travis_tests() {
   # If want to ignore some tests, use below
   #GLOBIGNORE=$BDIR/src/Euler012*
+  rm /tmp/euler.log > /dev/null 2>&1
   TESTS=( "$BDIR/src/Euler"* )
   for tcase in "${TESTS[@]}"; do
-    "$tcase"
+    "$tcase" | tee -a /tmp/euler.log
   done
+  FAIL=$(grep "FAILED" /tmp/euler.log)
+  if [ "${FAIL}x" != "x" ]; then
+    echo -e "-----\n-----\n"
+    echo "$FAIL"
+    exit 1
+  fi
 }
 
 build() {
