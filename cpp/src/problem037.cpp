@@ -38,12 +38,11 @@ public:
     }
 
     bool is_truncatable_prime(u_int num) {
-        u_int digits = count_places(num) - 1;
         u_int reversed = util::reverse(num);
         u_int divisor = 10;
         u_int left_trunc = 0;
 
-        while (digits-- != 0) {
+        while (divisor < num) {
             u_int right_trunc = num % divisor;
             divisor *= 10;
             if (!is_prime(right_trunc)) {
@@ -63,7 +62,6 @@ public:
 
     std::vector<u_int> truncatable_primes() {
         std::vector<u_int> result;
-
         for (std::vector<u_int>::const_iterator i = primes.begin();
                 i != primes.end(); ++i) {
             if (is_truncatable_prime(*i)) {
@@ -76,16 +74,6 @@ public:
         return result;
     }
 private:
-    u_int count_places(u_int num) {
-        u_int count = 0;
-        while(num != 0) {
-            count++;
-            num /= 10;
-        }
-
-        return count;
-    }
-
     u_int max;
     std::vector<u_int> primes;
 };
