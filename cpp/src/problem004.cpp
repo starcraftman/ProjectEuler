@@ -9,32 +9,15 @@ Find the largest palindrome made from the product of two 3-digit numbers.
 #include <iostream> /* Input/output objects. */
 
 #include "gtest/gtest.h"
+#include "util.hpp"
 
 /**************** Namespace Declarations ******************/
 using std::cout;
 using std::endl;
 
 /************** Global Vars & Functions *******************/
-int reverse(int num) {
-	int reversed = 0;
-
-	while (num > 0) {
-		reversed *= 10;
-		reversed += num % 10;
-		num /= 10;
-	}
-
-    return reversed;
-}
-
 bool is_palindrome(int num) {
-    return reverse(num) == num;
-}
-
-TEST(Euler004, ReverseNum) {
-    int num = 906609;
-
-    ASSERT_EQ(num, reverse(num));
+    return util::reverse(num) == num;
 }
 
 TEST(Euler004, FinalAnswer) {
