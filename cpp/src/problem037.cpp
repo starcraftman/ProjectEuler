@@ -12,12 +12,9 @@ NOTE: 2, 3, 5, and 7 are not considered to be truncatable primes.
 /********************* Header Files ***********************/
 /* C++ Headers */
 #include <iostream> /* Input/output objects. */
-#include <set>
+#include <vector>
 #include <algorithm>
-#include <utility>
 
-#include "boost/assign.hpp"
-#include "boost/lambda/lambda.hpp"
 #include "gtest/gtest.h"
 #include "util.hpp"
 
@@ -29,14 +26,13 @@ using util::u_int;
 /****************** Class Definitions *********************/
 class Truncatables {
 public:
-    Truncatables(u_int max) : max(max) {
+    Truncatables(u_int max) {
         primes = util::simple_sieve(max);
     };
 
     bool is_prime(u_int num) {
         return std::binary_search(primes.begin(), primes.end(), num);
     }
-
     bool is_truncatable_prime(u_int num) {
         u_int reversed = util::reverse(num);
         u_int divisor = 10;
@@ -59,22 +55,20 @@ public:
 
         return true;
     }
-
     std::vector<u_int> truncatable_primes() {
         std::vector<u_int> result;
-        for (std::vector<u_int>::const_iterator i = primes.begin();
-                i != primes.end(); ++i) {
-            if (is_truncatable_prime(*i)) {
-                if (*i > 10) {
-                    result.push_back(*i);
-                }
+
+        std::vector<u_int>::const_iterator itr = primes.begin();
+        while (*(++itr) < 10);
+        for (; itr != primes.end(); ++itr) {
+            if (is_truncatable_prime(*itr)) {
+                result.push_back(*itr);
             }
         }
 
         return result;
     }
 private:
-    u_int max;
     std::vector<u_int> primes;
 };
 
