@@ -67,7 +67,10 @@ TEST(Util, SimpleSieve) {
     for (std::vector<int>::const_iterator i = result.begin(); i != result.end(); ++i, ++e) {
         ASSERT_EQ(*i, *e);
     }
+}
 
-
+TEST(Util, ReverseNum) {
+    u_int num = 3721;
+    ASSERT_EQ(1273, util::reverse(num));
 }
 

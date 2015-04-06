@@ -162,6 +162,19 @@ bool is_prime(T num) {
     return true;
 }
 
+/* Only applies to base 10 numbers. */
+template <class T>
+int reverse(T num) {
+    T reversed = 0;
+    while (num != 0) {
+        reversed *= 10;
+        reversed += num % 10;
+        num /= 10;
+    }
+
+    return reversed;
+}
+
 } /* end util:: */
 
 #endif /* _UTIL_HPP_ */
