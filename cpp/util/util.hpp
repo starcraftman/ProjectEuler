@@ -88,9 +88,8 @@ std::vector<T> find_divisors(T num, bool proper=false) {
     }
 
     std::sort(divs.begin(), divs.end());
-
     if (proper) {
-        //divs.erase(divs.rbegin() - 1);
+        divs.erase(divs.end() - 1);
     }
 
     return divs;

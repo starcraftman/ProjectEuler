@@ -44,7 +44,7 @@ TEST(Util, FindDivisors) {
 }
 
 TEST(Util, FindProperDivisors) {
-    std::vector<util::u_int> res = util::find_divisors(100U);
+    std::vector<util::u_int> res = util::find_divisors(100U, true);
     ASSERT_EQ(50, *res.rbegin());
 }
 
