@@ -43,6 +43,11 @@ TEST(Util, FindDivisors) {
     }
 }
 
+TEST(Util, FindProperDivisors) {
+    std::vector<util::u_int> res = util::find_divisors(100U);
+    ASSERT_EQ(50, *res.rbegin());
+}
+
 TEST(Util, IsPrime) {
     ASSERT_FALSE(util::is_prime(4));
     ASSERT_TRUE(util::is_prime(7));
@@ -57,7 +62,7 @@ TEST(Util, NextFalse) {
     ASSERT_EQ(3, util::next_false(example, 2));
 }
 
-TEST(Util, SimpleSieve) {
+TEST(Util, SieveErat) {
     std::vector<int> expect = boost::assign::list_of(2) (3) (5) (7) (11) (13) (17)
         (19) (23) (29) (31) (37) (41) (43) (47) (53) (59) (61) (67) (71) (73)
         (79) (83) (89) (97) (101) (103) (107) (109) (113);

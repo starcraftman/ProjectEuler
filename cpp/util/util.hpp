@@ -2,57 +2,10 @@
 #define _UTIL_HPP_
 
 /********************* Header Files ***********************/
-/* C++ Headers */
-#include <iostream> /* Input/output objects. */
-//#include <fstream> /* File operations. */
-//#include <sstream> /* String stream. */
-#include <string> /* C++ String class. */
-//#include <exception> /* Top level exception header. */
-//#include <stdexcept> /* Some useful common exceptions */
-//#include <new> /* Defines bad_malloc exception, new functions. */
-//#include <memory> /* std smart pointers like unique_ptr */
-//#include <typeinfo> /* Casting header. */
-//#include <limits> /* Inspect properties, numeric_limits<int> iLimit; */
-//#include <numeric> /* Math accumulators & other ops*/
-//#include <functional> /* Function declarations & std::bind */
-
-/* C++11 Only*/
-//#include <chrono> /* std::chrono contains timing for threads */
-//#include <initializer_list> /* Allows class to take list like {1,2} */
-//#include <random> /* Random c++ version */
-//#include <regex>
-//#include <thread>
-//#include <atomic>
-//#include <condition_variable>
-//#include <mutex>
-
-/* STL Headers */
+#include <iostream>
 #include <vector>
-//#include <list>
-//#include <deque>
-//#include <stack>
-//#include <queue>
-//#include <priority_queue>
-#include <set> // multiset for multiple keys allowed.
-//#include <map> // multimap for multiple keys allowed.
-//#include <bitset>
-//#include <utility> // Has pair for map, std::swap
-//#include <algorithm>
-//#include <iterator> // Contains back_inserter function and like.
-
-/* C Headers */
-//#include <cstdio>
-//#include <cstring>
-//#include <cstdlib> /* atof, rand, malloc... */
-//#include <cstddef> /* size_t, NULL */
-//#include <cstdarg> /* Variable argument functions */
-//#include <cctype> /* Character check functions */
-//#include <climits>
-//#include <cassert>
+#include <algorithm>
 #include <cmath>
-//$include <cstdint> /* C++11 only, standard u_int16 & such */
-
-/* Project Headers */
 
 namespace util {
 
@@ -99,12 +52,9 @@ std::vector<T> simple_sieve(T max) {
     std::vector<T> res;
 
     // Ignore 1 & 0
-    std::vector<bool> sieve;
-    sieve.push_back(true);
-    sieve.push_back(true);
-    for (T i = 2; i <= max; ++i) {
-        sieve.push_back(false);
-    }
+    std::vector<bool> sieve(max);
+    sieve[0] = true;
+    sieve[1] = true;
 
     T prime = 2;
     while (prime != -1) {
@@ -124,22 +74,26 @@ std::vector<T> simple_sieve(T max) {
 
 template <class T>
 std::vector<T> find_divisors(T num, bool proper=false) {
-    std::set<T> res;
+    std::vector<T> divs;
     T root = std::floor(std::sqrt(num));
 
     for (int i = 1; i <= root; ++i) {
         if ((num % i) == 0) {
-            res.insert(i);
-            res.insert(num / i);
+            divs.push_back(i);
+            T pair = num / i;
+            if (pair > root) {
+                divs.push_back(pair);
+            }
         }
     }
 
+    std::sort(divs.begin(), divs.end());
+
     if (proper) {
-        res.erase(num);
+        //divs.erase(divs.rbegin() - 1);
     }
 
-    std::vector<T> vec(res.begin(), res.end());
-    return vec;
+    return divs;
 }
 
 template <class T>
@@ -164,7 +118,7 @@ bool is_prime(T num) {
 
 /* Only applies to base 10 numbers. */
 template <class T>
-int reverse(T num) {
+T reverse(T num) {
     T reversed = 0;
     while (num != 0) {
         reversed *= 10;
