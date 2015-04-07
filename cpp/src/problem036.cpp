@@ -59,10 +59,6 @@ std::string to_base(u_int val, u_int base) {
 }
 
 bool both_bases_palindrome(u_int val) {
-    if ((val % 10) == 0) {
-        return false;
-    }
-
     std::string dec = to_base(val, 10);
     if (!is_palindrome(dec)) {
         return false;
@@ -86,7 +82,7 @@ TEST(Euler036, Conversions) {
 TEST(Euler036, FinalAnswer) {
     u_int sum = 0;
 
-    for (u_int i = 1; i < 1000000; ++i) {
+    for (u_int i = 1; i < 1000000; i += 2) {
         if (both_bases_palindrome(i)) {
             sum += i;
         }
