@@ -8,5 +8,5 @@ before_script:
   - bash ./bootstrap.sh
 
 script:
-  # For now just cpp tests, retry
-  - bash ./cpp/build.sh clean travis
+  # For now just cpp tests,
+  - cd cpp && bash ./build.sh clean travis
