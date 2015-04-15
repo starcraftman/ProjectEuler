@@ -19,13 +19,13 @@ TEST(Euler001, FinalAnswer) {
     int sum = 0;
 
     for (int i = 3; i < 1000; ++i) {
-	if ((i % 3) == 0 || (i % 5) == 0) {
-	    sum += i;
-	}
+        if ((i % 3) == 0 || (i % 5) == 0) {
+            sum += i;
+        }
     }
 
     cout << "The sum of all numbers up to 1000 divisible by 3 or 5:" <<
-	endl << sum << endl;
+            endl << sum << endl;
 
     ASSERT_EQ(233168, sum);
 }
