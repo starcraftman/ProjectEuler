@@ -79,3 +79,12 @@ TEST(Util, ReverseNum) {
     ASSERT_EQ(1273, util::reverse(num));
 }
 
+TEST(Util, EuclideanGCD) {
+    ASSERT_EQ(21, util::euclid_gcd(462, 147));
+}
+
+TEST(Util, IsCoprime) {
+    ASSERT_TRUE(util::is_coprime(3, 7));
+    ASSERT_FALSE(util::is_coprime(32, 2));
+}
+

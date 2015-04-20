@@ -124,6 +124,25 @@ T reverse(T num) {
     return reversed;
 }
 
+template <class T>
+T euclid_gcd(T min, T max) {
+    if (min > max) {
+        std::swap(min, max);
+    }
+
+    while (min != 0) {
+        max -= min * (max / min);
+        std::swap(min, max);
+    }
+
+    return max;
+}
+
+template <class T>
+bool is_coprime(T num1, T num2) {
+    return euclid_gcd(num1, num2) == 1;
+}
+
 } /* end util:: */
 
 #endif /* _UTIL_HPP_ */
