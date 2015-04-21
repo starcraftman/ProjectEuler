@@ -54,15 +54,14 @@ public:
     // In Farey Sequence, two elements are rational fractions: a/b c/d.
     // Then there exists a/b < q/b < c/d given by:
     // k = floor((n + b)/d) ; p = cK - a, q = dK - c;
-    // Arrays indexed in order, so cur_nums[0] = 'a'
     CoPair next() {
         T k = std::floor(double(limit + vals[b]) / (vals[d]));
-        vals[old_a] = vals[a];
-        vals[old_b] = vals[b];
+        T old_a = vals[a];
+        T old_b = vals[b];
         vals[a] = vals[c];
         vals[b] = vals[d];
-        vals[c] = k * vals[c] - vals[old_a];
-        vals[d] = k * vals[d] - vals[old_b];
+        vals[c] = k * vals[c] - old_a;
+        vals[d] = k * vals[d] - old_b;
 
         ind++;
         return CoPair(vals[a], vals[b]);
@@ -82,9 +81,9 @@ public:
     CoPair number() { return CoPair(vals[a], vals[b]); }
     T index() { return ind; }
 private:
-    enum ENTRIES { a = 0, b, c, d, old_a, old_b };
+    enum ENTRIES { a = 0, b, c, d };
     T limit;
-    T vals[6]; // Maps values from enum ENTRIES
+    T vals[4]; // Maps values from enum ENTRIES
     T ind;
 };
 
