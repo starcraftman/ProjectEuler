@@ -2,8 +2,11 @@
 #define _GENS_HPP_
 
 /********************* Header Files ***********************/
+#include <iostream>
 #include <vector>
 #include <utility>
+#include <cmath>
+#include <cstring>
 
 namespace util {
 
@@ -38,45 +41,51 @@ private:
 template <class T>
 class Coprimes {
 public:
+    Coprimes(T limit) : limit(limit) , ind(0) {
+        vals[a] = 0;
+        vals[b] = 1;
+        vals[c] = 1;
+        vals[d] = limit;
+    };
+
     typedef std::pair<T, T> CoPair;
     typedef std::vector<CoPair> CoPairs;
-    Coprimes(CoPair origin) : origin(origin) {};
-    static Coprimes odd_even_coprimes() {
-        return Coprimes(std::make_pair(2,1));
+
+    // In Farey Sequence, two elements are rational fractions: a/b c/d.
+    // Then there exists a/b < q/b < c/d given by:
+    // k = floor((n + b)/d) ; p = cK - a, q = dK - c;
+    // Arrays indexed in order, so cur_nums[0] = 'a'
+    CoPair next() {
+        T k = std::floor(double(limit + vals[b]) / (vals[d]));
+        vals[old_a] = vals[a];
+        vals[old_b] = vals[b];
+        vals[a] = vals[c];
+        vals[b] = vals[d];
+        vals[c] = k * vals[c] - vals[old_a];
+        vals[d] = k * vals[d] - vals[old_b];
+
+        ind++;
+        return CoPair(vals[a], vals[b]);
     }
-    static Coprimes odd_odd_coprimes() {
-        return Coprimes(std::make_pair(3,1));
-    }
 
-    // Collect max coprime pairs & return
-    // TODO: Change to Farey Sequence, allows better ordering of generation
-    std::vector<CoPair> collect(int max) {
-        std::vector<CoPair> to_visit; // Use vec as stack
-        to_visit.push_back(origin);
-        std::vector<CoPair> pairs;
-        pairs.push_back(origin);
+    // Collect coprime pairs & return
+    CoPairs collect() {
+        CoPairs pairs;
 
-        /* Using bfs, so results are fairly balanced */
-        while (pairs.size() < max) {
-            CoPair cur = to_visit.back(), child;
-            to_visit.pop_back();
-
-            child = std::make_pair(2 * cur.first - cur.second, cur.first);
-            to_visit.insert(to_visit.begin(), child);
-            pairs.push_back(child);
-            child = std::make_pair(2 * cur.first + cur.second, cur.first);
-            to_visit.insert(to_visit.begin(), child);
-            pairs.push_back(child);
-            child = std::make_pair(2 * cur.second + cur.first, cur.second);
-            to_visit.insert(to_visit.begin(), child);
-            pairs.push_back(child);
+        while (vals[c] <= limit) {
+            pairs.push_back(next());
         }
 
         return pairs;
     }
 
+    CoPair number() { return CoPair(vals[a], vals[b]); }
+    T index() { return ind; }
 private:
-    CoPair origin;
+    enum ENTRIES { a = 0, b, c, d, old_a, old_b };
+    T limit;
+    T vals[6]; // Maps values from enum ENTRIES
+    T ind;
 };
 
 } /* end util::gens */

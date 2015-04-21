@@ -29,12 +29,17 @@ TEST(Util, FibSeries) {
 }
 
 TEST(Util, CoprimeSeries) {
-    Coprimes<int> cGen = Coprimes<int>::odd_even_coprimes();
-    Coprimes<int>::CoPairs pairs = cGen.collect(10);
+    Coprimes<int> cGen(4);
+    Coprimes<int>::CoPairs pairs = cGen.collect();
+    std::vector<int> expect = boost::assign::list_of(1) (4) (1) (3)
+        (1) (2) (2) (3) (3) (4) (1) (1);
 
+    ASSERT_EQ(expect.size() / 2, pairs.size());
+    std::vector<int>::const_iterator e = expect.begin();
     for (Coprimes<int>::CoPairs::const_iterator i = pairs.begin();
             i != pairs.end(); ++i) {
-        cout << i->first << ", " << i->second << endl;
+        ASSERT_EQ(*(e++), i->first);
+        ASSERT_EQ(*(e++), i->second);
     }
 }
 
