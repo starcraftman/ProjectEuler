@@ -13,7 +13,8 @@ namespace util {
 namespace gens {
 
 /************** Class & Func Declarations *****************/
-/* Starts at Fibonacci number 1. */
+/* Starts at Fibonacci number 1.
+ * Templated in case of bigint need. */
 template <class T>
 class Fibonacci {
 public:
@@ -38,26 +39,25 @@ private:
     T ind;
 };
 
-template <class T>
 class Coprimes {
 public:
-    Coprimes(T limit) : limit(limit) , ind(0) {
+    Coprimes(int limit) : limit(limit) , ind(0) {
         vals[a] = 0;
         vals[b] = 1;
         vals[c] = 1;
         vals[d] = limit;
     };
 
-    typedef std::pair<T, T> CoPair;
+    typedef std::pair<int, int> CoPair;
     typedef std::vector<CoPair> CoPairs;
 
     // In Farey Sequence, two elements are rational fractions: a/b c/d.
     // Then there exists a/b < q/b < c/d given by:
     // k = floor((n + b)/d) ; p = cK - a, q = dK - c;
     CoPair next() {
-        T k = std::floor(double(limit + vals[b]) / (vals[d]));
-        T old_a = vals[a];
-        T old_b = vals[b];
+        int k = std::floor(double(limit + vals[b]) / (vals[d]));
+        int old_a = vals[a];
+        int old_b = vals[b];
         vals[a] = vals[c];
         vals[b] = vals[d];
         vals[c] = k * vals[c] - old_a;
@@ -79,12 +79,12 @@ public:
     }
 
     CoPair number() { return CoPair(vals[a], vals[b]); }
-    T index() { return ind; }
+    int index() { return ind; }
 private:
     enum ENTRIES { a = 0, b, c, d };
-    T limit;
-    T vals[4]; // Maps values from enum ENTRIES
-    T ind;
+    int limit;
+    int vals[4]; // Maps values from enum ENTRIES
+    int ind;
 };
 
 } /* end util::gens */
