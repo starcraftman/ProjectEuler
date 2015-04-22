@@ -43,23 +43,3 @@ TEST(UtilGens, CoprimeSeries) {
     }
 }
 
-// Example, will refactor to the lib somewhere
-TEST(UtilGens, TripletSeries) {
-    Coprimes cGen(10);
-    Coprimes::CoPairs pairs = cGen.collect();
-
-    for (Coprimes::CoPairs::const_iterator i = pairs.begin(); i != pairs.end(); ++i) {
-        int diff = i->first - i->second;
-        if ((diff % 2) == 0) {
-            continue;
-        }
-        cout << i->first << " " << i->second << endl;
-
-        int a = std::abs(i->first * i->first - i->second * i->second);
-        int b = 2 * i->first * i->second;
-        int c = i->first * i->first + i->second * i->second;
-
-        cout << "Trip: " << a << " " << b << " " << c << endl;
-    }
-}
-
