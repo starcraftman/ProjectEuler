@@ -35,20 +35,6 @@ int places(u_long num) {
     return places;
 }
 
-bool is_pandigital(u_long num) {
-    std::stringstream ss;
-    ss << num;
-    std::string temp = ss.str();
-    std::sort(temp.begin(), temp.end());
-
-    std::stringstream ss2;
-    for (int i = 1; i <= places(num); ++i) {
-        ss2 << i;
-    }
-
-    return temp == ss2.str();
-}
-
 bool is_pandigital(std::string num) {
     std::sort(num.begin(), num.end());
 
@@ -58,6 +44,14 @@ bool is_pandigital(std::string num) {
     }
 
     return num == ss2.str();
+}
+
+bool is_pandigital(u_long num) {
+    std::stringstream ss;
+    ss << num;
+    std::string temp = ss.str();
+
+    return is_pandigital(temp);
 }
 
 TEST(Euler032, IsPanDigital) {
