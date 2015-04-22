@@ -40,13 +40,12 @@ TEST(Euler009, FinalAnswer) {
    for (int a = 1; a < max; ++a) {
    int bmax = max - a;
       for (int b = a; b < bmax; ++b) {
-         for (int c = b + 1; c < bmax; ++c) {
-            if (is_pythagorean_triplet(a, b, c) && ((a + b + c) == 1000)) {
-               product = a * b * c;
-               cout << "The triplet " << a << " " << b << " " << c
-                  << " has product " << product << endl;
-               break;
-            }
+         int c = max - a - b;
+         if (is_pythagorean_triplet(a, b, c)) {
+            product = a * b * c;
+            cout << "The triplet " << a << " " << b << " " << c
+               << " has product " << product << endl;
+            break;
          }
       }
    }
