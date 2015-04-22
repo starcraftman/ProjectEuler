@@ -21,17 +21,31 @@ To solve, I will:
 #include <algorithm>
 
 #include "gtest/gtest.h"
+#include "gens.hpp"
 
 /**************** Namespace Declarations ******************/
 using std::cout;
 using std::endl;
 using std::string;
+using util::gens::Coprimes;
 
 /************** Global Vars & Functions *******************/
 /* Struct like class, quite simple. */
 class Triplet {
 public:
-    Triplet(int a, int b, int c) : a(a), b(b), c(c), sum(a + b + c) {};
+    Triplet() : a(0), b(0), c(0), sum(0) {};
+    Triplet(int _a, int _b, int _c) : sum(_a + _b + _c) {
+        // Just for output ordering
+        a = std::min(std::min(_a, _b), _c);
+        c = std::max(std::max(_a, _b), _c);
+        if (_a > a && _a < c) {
+            b = _a;
+        } else if (_b > a && _b < c) {
+            b = _b;
+        } else {
+            b = _c;
+        }
+    };
 
     /* Compare */
     inline bool operator==(const Triplet &other) const {
@@ -47,77 +61,109 @@ public:
         return Triplet(a * k, b * k, c * k);
     }
 
-    const int a;
-    const int b;
-    const int c;
-    const int sum;
+    int a;
+    int b;
+    int c;
+    int sum;
 private:
     friend std::ostream & operator<<(std::ostream &out, const Triplet &trip);
 };
 
 std::ostream & operator<<(std::ostream &out, const Triplet &trip) {
     return out << "Triplet: " << trip.a << " " << trip.b << " "
-        << trip.c << endl;
+        << trip.c;
 }
 
-class TripletGen {
-public:
-    TripletGen(int max) : max(max) {};
+std::vector<Triplet> find_triplets(int limit) {
+    Coprimes cGen(limit);
+    Coprimes::CoPairs pairs = cGen.collect();
+    std::vector<Triplet> trips;
 
-    /* Shouldn't be used. */
-    bool static is_triplet(int a, int b, int c) {
-        return (a * a + b * b) == c * c;
-    }
-
-    void find_triplets() {
-        /* TODO: Use euclids algorthim for generating triplets.
-         * TODO: Requires separate generator for coprime pairs,
-         * probably in util::.*/
-    }
-
-    /* total = a + b + c */
-    std::vector<Triplet> candidates(int total) {
-        std::vector<Triplet> res;
-
-        for (std::vector<Triplet>::const_iterator i = trips.begin();
-                i != trips.end(); ++i) {
-            if ((total / i->sum) == 0) {
-                int factor = total / i->sum;
-                res.push_back(*i * factor);
-            }
+    for (Coprimes::CoPairs::const_iterator i = pairs.begin(); i != pairs.end(); ++i) {
+        if (((i->first - i->second) % 2) == 0) {
+            continue;
         }
 
-        return res;
+        int a = std::abs(i->first * i->first - i->second * i->second);
+        int b = 2 * i->first * i->second;
+        int c = i->first * i->first + i->second * i->second;
+        Triplet trip(a, b, c);
+        trips.push_back(trip);
     }
-private:
-    const int max;
-    /* List of UNIQUE primitive triplets,
-     * includes {3,4,5} not {6,8,10} */
-    std::vector<Triplet> trips;
-};
+    std::sort(trips.begin(), trips.end());
+
+    return trips;
+}
+
+/* total = a + b + c */
+std::vector<Triplet> candidates(const std::vector<Triplet> &trips, int total) {
+    std::vector<Triplet> res;
+
+    for (std::vector<Triplet>::const_iterator itr = trips.begin();
+            itr != trips.end(); ++itr) {
+        if (itr->sum > total) {
+            break;
+        }
+
+        if ((total % itr->sum) == 0) {
+            int factor = total / itr->sum;
+            res.push_back(*itr * factor);
+        }
+    }
+
+    return res;
+}
 
 /**************** Global Functions & Data ******************/
-TEST(Euler039, Triplet) {
-    ASSERT_TRUE(TripletGen::is_triplet(20, 48, 52));
-    ASSERT_TRUE(TripletGen::is_triplet(30, 40, 50));
+TEST(Euler039, FirstTriplet) {
+    Triplet expect(3, 4, 5);
+    std::vector<Triplet> trips = find_triplets(20);
+    ASSERT_EQ(expect, *trips.begin());
 }
 
-TEST(Euler039, DISABLED_FindTriplets) {
-    std::vector<Triplet> expected, res;
+bool comp(const Triplet &l, const Triplet &r) {
+    return l.a < r.a;
+}
+
+TEST(Euler039, TripletsForP) {
+    std::vector<Triplet> expected;
     expected.push_back(Triplet(20, 48, 52));
-    expected.push_back(Triplet(24, 51, 51));
+    expected.push_back(Triplet(24, 45, 51));
     expected.push_back(Triplet(30, 40, 50));
 
-    TripletGen tg(200);
-    res = tg.candidates(120);
+    std::vector<Triplet> trips = find_triplets(20);
+    std::vector<Triplet> cands = candidates(trips, 120);
+    std::sort(cands.begin(), cands.end(), comp);
 
-    for (std::vector<Triplet>::const_iterator i = res.begin();
-            i != res.end(); ++i) {
-        cout << i->a << " " << i->b << " " << i->c << endl;
-    }
-
-    ASSERT_EQ(3, res.size());
+    ASSERT_EQ(3, cands.size());
     for (std::vector<Triplet>::size_type i = 0; i < expected.size(); ++i) {
-        ASSERT_TRUE(res[i] == expected[i]);
+        ASSERT_TRUE(cands[i] == expected[i]);
     }
 }
+
+TEST(Euler039, FinalAnswer) {
+    std::vector<Triplet> trips = find_triplets(100);
+    int big_p = 0;
+    unsigned int big_num_trips = 0;
+
+    for (int p = 12; p < 1000; ++p) {
+        std::vector<Triplet> cands = candidates(trips, p);
+        if (cands.size() > big_num_trips) {
+            big_num_trips = cands.size();
+            big_p = p;
+        }
+
+    }
+
+    cout << "The p value: " <<  big_p << " generates " << big_num_trips
+        << " triplets." << endl << "They are:" << endl;
+    std::vector<Triplet> cands = candidates(trips, big_p);
+    std::sort(cands.begin(), cands.end(), comp);
+    for (std::vector<Triplet>::const_iterator i = cands.begin(); i != cands.end(); ++i) {
+        cout << *i << endl;
+    }
+
+    ASSERT_EQ(840, big_p);
+    ASSERT_EQ(8, big_num_trips);
+}
+
