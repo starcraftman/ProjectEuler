@@ -26,7 +26,6 @@ To solve, I will:
 /**************** Namespace Declarations ******************/
 using std::cout;
 using std::endl;
-using std::string;
 using util::gens::Coprimes;
 
 /************** Global Vars & Functions *******************/
@@ -84,10 +83,9 @@ std::vector<Triplet> find_triplets(int limit) {
             continue;
         }
 
-        int a = std::abs(i->first * i->first - i->second * i->second);
-        int b = 2 * i->first * i->second;
-        int c = i->first * i->first + i->second * i->second;
-        Triplet trip(a, b, c);
+        Triplet trip(std::abs(i->first * i->first - i->second * i->second),
+                    2 * i->first * i->second,
+                    i->first * i->first + i->second * i->second);
         trips.push_back(trip);
     }
     std::sort(trips.begin(), trips.end());
@@ -142,24 +140,24 @@ TEST(Euler039, TripletsForP) {
 }
 
 TEST(Euler039, FinalAnswer) {
-    std::vector<Triplet> trips = find_triplets(100);
+    std::vector<Triplet> trips = find_triplets(20);
     int big_p = 0;
     unsigned int big_num_trips = 0;
 
-    for (int p = 12; p < 1000; ++p) {
+    for (int p = 12; p <= 1000; ++p) {
         std::vector<Triplet> cands = candidates(trips, p);
         if (cands.size() > big_num_trips) {
             big_num_trips = cands.size();
             big_p = p;
         }
-
     }
 
-    cout << "The p value: " <<  big_p << " generates " << big_num_trips
-        << " triplets." << endl << "They are:" << endl;
+    cout << "The p value " <<  big_p << " generates " << big_num_trips
+        << " triplets." << endl;
     std::vector<Triplet> cands = candidates(trips, big_p);
     std::sort(cands.begin(), cands.end(), comp);
-    for (std::vector<Triplet>::const_iterator i = cands.begin(); i != cands.end(); ++i) {
+    for (std::vector<Triplet>::const_iterator i = cands.begin();
+            i != cands.end(); ++i) {
         cout << *i << endl;
     }
 
