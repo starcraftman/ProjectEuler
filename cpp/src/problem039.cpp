@@ -36,7 +36,7 @@ class Triplet {
 public:
     Triplet() : a(0), b(0), c(0), sum(0) {};
     Triplet(int _a, int _b, int _c) : sum(_a + _b + _c) {
-        // Just for output ordering
+        // a < b < c
         a = std::min(std::min(_a, _b), _c);
         c = std::max(std::max(_a, _b), _c);
         if (_a > a && _a < c) {
@@ -57,7 +57,6 @@ public:
     inline bool operator>(const Triplet &other)  const { return other.operator<(*this); }
     inline bool operator<=(const Triplet &other) const { return !operator>(other); }
     inline bool operator>=(const Triplet &other) const { return !operator<(other); }
-
     Triplet operator*(int k) const {
         return Triplet(a * k, b * k, c * k);
     }
@@ -96,11 +95,11 @@ std::vector<Triplet> find_triplets(int limit) {
 }
 
 /* total = a + b + c */
-std::vector<Triplet> candidates(const std::vector<Triplet> &trips, int total) {
+template <class Iter>
+std::vector<Triplet> candidates_for_total(Iter itr, Iter end, int total) {
     std::vector<Triplet> res;
 
-    for (std::vector<Triplet>::const_iterator itr = trips.begin();
-            itr != trips.end(); ++itr) {
+    for ( ; itr != end; ++itr) {
         if (itr->sum > total) {
             break;
         }
@@ -132,7 +131,8 @@ TEST(Euler039, TripletsForP) {
     expected.push_back(Triplet(30, 40, 50));
 
     std::vector<Triplet> trips = find_triplets(20);
-    std::vector<Triplet> cands = candidates(trips, 120);
+    std::vector<Triplet> cands = candidates_for_total(trips.begin(),
+            trips.end(), 120);
     std::sort(cands.begin(), cands.end(), comp);
 
     ASSERT_EQ(3, cands.size());
@@ -147,7 +147,8 @@ TEST(Euler039, FinalAnswer) {
     unsigned int big_num_trips = 0;
 
     for (int p = 12; p <= 1000; p += 2) {
-        std::vector<Triplet> cands = candidates(trips, p);
+        std::vector<Triplet> cands = candidates_for_total(trips.begin(),
+                trips.end(), p);
         if (cands.size() > big_num_trips) {
             big_num_trips = cands.size();
             big_p = p;
@@ -156,7 +157,8 @@ TEST(Euler039, FinalAnswer) {
 
     cout << "The p value " <<  big_p << " generates " << big_num_trips
         << " triplets." << endl;
-    std::vector<Triplet> cands = candidates(trips, big_p);
+    std::vector<Triplet> cands = candidates_for_total(trips.begin(),
+            trips.end(), big_p);
     std::sort(cands.begin(), cands.end(), comp);
     for (std::vector<Triplet>::const_iterator i = cands.begin();
             i != cands.end(); ++i) {
