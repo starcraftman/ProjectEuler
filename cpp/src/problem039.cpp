@@ -13,6 +13,8 @@ To solve, I will:
 1) Generate all unique triplets efficiently.
 2) Make function that identifies multiple of triplets, such a + b + c = p.
 3) Iterate 1 - 1000 to get triplets.
+NB: Optimization noticed after, only need to search even p since sums
+of triplets always even.
  */
 /********************* Header Files ***********************/
 /* C++ Headers */
@@ -144,7 +146,7 @@ TEST(Euler039, FinalAnswer) {
     int big_p = 0;
     unsigned int big_num_trips = 0;
 
-    for (int p = 12; p <= 1000; ++p) {
+    for (int p = 12; p <= 1000; p += 2) {
         std::vector<Triplet> cands = candidates(trips, p);
         if (cands.size() > big_num_trips) {
             big_num_trips = cands.size();
