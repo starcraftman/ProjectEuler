@@ -18,8 +18,8 @@ using util::gens::Coprimes;
 
 /************** Global Vars & Functions *******************/
 TEST(UtilGens, FibSeries) {
-    std::vector<int> first_ten = boost::assign::list_of(1) (1) (2)
-        (3) (5) (8) (13) (21) (34) (55) (89) (144);
+    std::vector<int> first_ten = boost::assign::list_of(1) (2)
+        (3) (5) (8) (13) (21) (34) (55) (89) (144) (233);
     util::gens::Fibonacci<int> fib;
 
     for (std::vector<int>::const_iterator i = first_ten.begin(); i != first_ten.end(); ++i) {

@@ -18,14 +18,16 @@ namespace gens {
 template <class T>
 class Fibonacci {
 public:
-    Fibonacci() : two_back(0), one_back(1), num(1), ind(1) {};
+    Fibonacci() : two_back(0), one_back(1), num(1), ind(2) {};
     Fibonacci(T two, T one, T ind) : two_back(two), one_back(one),
             num(one + two), ind(ind) {};
 
     T next() {
-        num = one_back + two_back;
+        ++ind;
+        T old = num;
+        num = num + one_back;
         two_back = one_back;
-        one_back = num;
+        one_back = old;
 
         return num;
     }

@@ -41,5 +41,14 @@ Thumbs.db
 ########
 .*
 !.git*
-libs
+**/libs
 **/gen
+**/*.ninja
+**/.ninja*
+**/Makefile
+**/CMakeCache.txt
+**/CMakeFiles
+**/*.cmake
+
+*.py
+**/*.exekk # All targets end exe

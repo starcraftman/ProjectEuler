@@ -26,6 +26,7 @@ TEST(Euler002, FinalAnswer) {
     u_long sum = 0;
 
     while (fib.number() < MAX_FIB) {
+        cout << "Fib ind: " << fib.index() << " Fib num: " << fib.number() << endl;
         fib.next();
         if ((fib.number() % 2) == 0) {
             sum += fib.number();

@@ -97,9 +97,9 @@ while (( $# > 0 )); do
       ;;
     +([0-9]))
       # Delete executable so run fails if compilation has errors
-      command rm "$BDIR/src/Euler0$arg" 2>/dev/null
+      command rm "$BDIR/src/Euler0$arg.exe" 2>/dev/null
       build 1
-      "$BDIR/src/Euler0$arg"
+      "$BDIR/src/Euler0$arg.exe"
       ;;
     *) # Default
       echo "$arg: Not Recognized!"
