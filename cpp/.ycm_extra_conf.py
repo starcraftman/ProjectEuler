@@ -5,6 +5,7 @@
 import os
 import ycm_core
 
+CPP_ROOT = os.path.dirname(os.path.abspath(__file__))
 # These are the compilation flags that will be used by YCM to check c files.
 FLAGS = [
     # C Flags
@@ -22,7 +23,7 @@ FLAGS = [
     # Important for clang, choose a standard below.
     # C++: c/gnu++98, c++03, c/gnu++11,
     # C: c/gnu90, c/gnu99, c/gnu11
-    '-std=c++98',
+    '-std=c++17',
     # Need to tell clang language of headers.
     # For a C project set to 'c' instead of 'c++'.
     '-x',
@@ -33,11 +34,11 @@ FLAGS = [
     '-isystem',
     '/usr/local/include',
     '-I',
-    'libs/include',
+    os.path.join(CPP_ROOT, 'libs/include'),
     '-I',
-    'util',
+    os.path.join(CPP_ROOT, 'util'),
     '-I',
-    'src',
+    os.path.join(CPP_ROOT, 'src'),
 ]
 
 

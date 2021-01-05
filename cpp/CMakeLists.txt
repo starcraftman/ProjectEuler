@@ -21,7 +21,7 @@ SET(GTEST_ROOT  "${BOOST_ROOT}")
 SET(GMP_LIB     "${CMAKE_SOURCE_DIR}/libs/lib/libgmp.a")
 SET(UTIL_LIB    "util")
 
-FIND_PACKAGE(Boost 1.57.0 REQUIRED chrono date_time filesystem regex system thread)
+FIND_PACKAGE(Boost 1.57.0 REQUIRED COMPONENTS chrono date_time filesystem regex system thread)
 FIND_PACKAGE(GTest 1.7 REQUIRED)
 FIND_PACKAGE(Threads REQUIRED)
 
@@ -40,6 +40,7 @@ INCLUDE_DIRECTORIES(
 
 ADD_SUBDIRECTORY(util)
 ADD_SUBDIRECTORY(src)
+ADD_SUBDIRECTORY(primer)
 # Debug
 #GET_CMAKE_PROPERTY(_variablenames variables)
 #FOREACH (_variablename ${_variablenames})

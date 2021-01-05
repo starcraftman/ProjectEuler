@@ -26,7 +26,8 @@ TEST(Euler025, FirstTen) {
     Fibonacci<fib_t> fib;
 
     for (std::vector<fib_t>::const_iterator itr = expect.begin(); itr != expect.end(); ++itr) {
-        ASSERT_EQ(*itr, fib.next());
+        ASSERT_EQ(*itr, fib.number());
+        fib.next();
     }
 }
 

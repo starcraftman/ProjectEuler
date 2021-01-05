@@ -2,6 +2,7 @@
 #define _UTIL_HPP_
 
 /********************* Header Files ***********************/
+#include <exception>
 #include <iostream>
 #include <set>
 #include <vector>
@@ -18,15 +19,24 @@ typedef unsigned int u_int;
 typedef unsigned short u_shrt;
 
 /************** Class & Func Declarations *****************/
+// Simple class to throw when processing done.
+class NoMoreValues: public std::exception {
+    public:
+    virtual const char * msg() const throw() {
+        return "No more values to process.";
+    }
+};
+
+
 template<class T>
 T next_false(std::vector<bool> const & sieve, T start_index) {
-    for (T i = start_index; i < sieve.size(); ++i) {
+    for (typename std::vector<bool>::size_type i = start_index; i < sieve.size(); ++i) {
         if (sieve[i] == false) {
             return i;
         }
     }
 
-    return -1;
+    throw NoMoreValues();
 }
 
 template <class T>
@@ -57,16 +67,20 @@ std::vector<T> sieve_erat(T max) {
     sieve[1] = true;
 
     T prime = 2;
-    while (prime != -1) {
-        res.push_back(prime);
+    try {
+        while (true) {
+            res.push_back(prime);
 
-        T index = prime;
-        while (index <= max) {
-            sieve[index] = true;
-            index += prime;
+            T index = prime;
+            while (index <= max) {
+                sieve[index] = true;
+                index += prime;
+            }
+
+            prime = next_false(sieve, prime);
         }
-
-        prime = next_false(sieve, prime);
+    } catch (NoMoreValues &e) {
+        std::cout << e.msg() << std::endl;
     }
 
     return res;
@@ -75,9 +89,9 @@ std::vector<T> sieve_erat(T max) {
 template <class T>
 std::vector<T> find_divisors(T num, bool proper=false) {
     std::set<T> divs;
-    T root = std::floor(std::sqrt(num));
 
-    for (int i = 1; i <= root; ++i) {
+    typename std::set<T>::size_type root = std::floor(std::sqrt(num));
+    for (typename std::set<T>::size_type i = 1; i <= root; ++i) {
         if ((num % i) == 0) {
             divs.insert(i);
             divs.insert(num / i);
@@ -102,7 +116,7 @@ bool is_prime(T num) {
     }
 
     T root = std::floor(std::sqrt(num));
-    for (int i = 5; i <= root; i += 6) {
+    for (T i = 5; i <= root; i += 6) {
         if ((num % i) == 0 || (num % (i + 2)) == 0) {
             return false;
         }

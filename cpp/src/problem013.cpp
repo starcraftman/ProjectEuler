@@ -54,15 +54,12 @@ TEST(Euler013, FinalAnswer) {
         counter += temp;
     }
 
-    std::stringstream ss, ss10;
-    ss << counter;
-    std::string full = ss.str();
-    for (std::string::const_iterator itr = ss.str().begin();
-            itr != ss.str().begin() + 10; ++itr) {
-        ss10 << *itr;
+    std::string first_ten(counter.str());
+    cout << first_ten << endl;
+    while (first_ten.length() != 10) {
+        first_ten.pop_back();
     }
-
     cout << "Full sum: " << counter << endl;
-    cout << "First 10 digits: " << ss10.str() << endl;
-    ASSERT_STREQ("5537376230", ss10.str().c_str());
+    cout << "First 10 digits: " << first_ten << endl;
+    ASSERT_STREQ("5537376230", first_ten.c_str());
 }
