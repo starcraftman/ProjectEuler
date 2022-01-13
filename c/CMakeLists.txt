@@ -3,7 +3,7 @@ PROJECT(ProjectEuler C)
 
 # Variables
 SET(DEBUG_FLAGS "-ggdb -Wall -Wextra -Winline -Wfatal-errors -pedantic")
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu11 -D_REENTRANT ${DEBUG_FLAGS}")
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu17 -D_REENTRANT ${DEBUG_FLAGS}")
 SET(GTEST_ROOT  "${CMAKE_SOURCE_DIR}/libs")
 SET(CLIB "my_c")
 

@@ -3,7 +3,7 @@
 My Solutions to https://projecteuler.net
 This is spoilers if you plan on doing.
 
-1. Run `bootstrap.sh`, long build of all dependencies
+1. Build common libs with following: `python GetLibsI.py boost gnump gtest`
 
 1. Enter either folder and use `build.sh` to build problems.
 

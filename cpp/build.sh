@@ -49,6 +49,8 @@ build() {
   pushd "$BDIR"
   if [ ! -f "$BDIR/CMakeCache.txt" ]; then
     if type -t 'ninja' > /dev/null 2>&1; then
+      echo "$(pwd)"
+      echo "HELLO"
       cmake -G "Ninja" $CMAKE_OPTS ..
     else
       cmake -G "Unix Makefiles" $CMAKE_OPTS ..
@@ -89,7 +91,7 @@ while (( $# > 0 )); do
       ;;
     lib)
       build
-      "$BDIR/util/LibTest"
+      "$BDIR/util/LibTest.exe"
       ;;
     travis)
       build
@@ -99,7 +101,7 @@ while (( $# > 0 )); do
       # Delete executable so run fails if compilation has errors
       command rm "$BDIR/src/Euler0$arg.exe" 2>/dev/null
       build 1
-      "$BDIR/src/Euler0$arg.exe"
+      "$BDIR/src/Euler00$arg.exe"
       ;;
     *) # Default
       echo "$arg: Not Recognized!"

@@ -40,7 +40,7 @@ INCLUDE_DIRECTORIES(
 
 ADD_SUBDIRECTORY(util)
 ADD_SUBDIRECTORY(src)
-ADD_SUBDIRECTORY(primer)
+# ADD_SUBDIRECTORY(primer)
 # Debug
 #GET_CMAKE_PROPERTY(_variablenames variables)
 #FOREACH (_variablename ${_variablenames})
