@@ -11,7 +11,7 @@ usage() {
   prof   : Compile with profiling enabled (slower).
   lib    : Build & run lib tests.
   travis : Run tests.
-  *      : Problem number, build & run that problem. i.e. 22 -> run problem 22"
+  *      : Problem number, build & run that problem. Use leading 0 for < 10. Example 03 -> runs Euler003.exe"
 }
 
 clean() {
@@ -101,7 +101,7 @@ while (( $# > 0 )); do
       # Delete executable so run fails if compilation has errors
       command rm "$BDIR/src/Euler0$arg.exe" 2>/dev/null
       build 1
-      "$BDIR/src/Euler00$arg.exe"
+      "$BDIR/src/Euler0$arg.exe"
       ;;
     *) # Default
       echo "$arg: Not Recognized!"
