@@ -1,11 +1,11 @@
 language: cpp
-python: 2.7
+python: 3.6
 compiler:
   - gcc
 
 before_script:
   # Spams log, suppress output during build of boost, around 20 mins
-  - bash ./bootstrap.sh
+  - python ./GetLibsI.py boost gnump gtest
 
 script:
   # For now just cpp tests,
