@@ -82,21 +82,28 @@ void gcd(T first, T second, std::vector<T> &factors) {
 class Fraction
 {
 public:
-    Fraction (int numerator, int denomenator) :
+    Fraction(int numerator = 1, int denomenator = 1) :
         initial_numerator(numerator),
         initial_denomenator(denomenator),
         numerator(numerator),
         denomenator(denomenator) {}
+    Fraction(const Fraction &other) :
+        initial_numerator(other.numerator),
+        initial_denomenator(other.denomenator),
+        numerator(other.numerator),
+        denomenator(other.denomenator),
+        factors(other.factors){
+        }
     bool cancel_digits();
     bool is_reduced();
     void reduce();
+
+    // Operators
     Fraction& operator*=(const Fraction &rhs) {
         this->numerator *= rhs.numerator;
         this->denomenator *= rhs.denomenator;
         return *this;
     }
-
-    // Friends
     friend std::ostream& operator<<(std::ostream &os, const Fraction &fraction);
     friend Fraction operator*(Fraction &lhs, const Fraction &rhs) {
         Fraction n_lhs(lhs.numerator, lhs.denomenator);
@@ -104,7 +111,6 @@ public:
         n_lhs.denomenator *= rhs.denomenator;
         return n_lhs;
     }
-
 
     // Data
     const int initial_numerator;
@@ -139,18 +145,18 @@ bool Fraction::cancel_digits() {
 }
 
 bool Fraction::is_reduced() {
-    return this->numerator != this->initial_numerator && this->denomenator != this->initial_denomenator;
+    return this->numerator != this->initial_numerator &&
+        this->denomenator != this->initial_denomenator;
 }
 
 // Reduce fraction based on initial values.
 void Fraction::reduce() {
-    if (this->factors.size() == 0) {
-        gcd(this->initial_numerator, this->initial_denomenator, this->factors);
-    }
+    factors.clear();
+    gcd(this->numerator, this->denomenator, this->factors);
 
     int greatest = *factors.rbegin();
-    this->numerator = this->initial_numerator / greatest;
-    this->denomenator = this->initial_denomenator / greatest;
+    this->numerator = this->numerator / greatest;
+    this->denomenator = this->denomenator / greatest;
 }
 
 std::ostream& operator<<(std::ostream &os, const Fraction &fraction) {
@@ -171,6 +177,10 @@ Fraction generate_fractions() {
     std::vector<Fraction> found;
     bool dnum_ten = false;
 
+    /* Improvement:
+     * It is possible to be more efficient and  generate ONLY the numbers that can cancel,
+     * but that isn't needed in this small of a problem.
+     */
     for (int dnum = 11; dnum < 100; ++dnum) {
         // cout << "Generating fractions for denomenator: " << dnum << endl;
         if ( (dnum % 10) == 0 ) {
@@ -184,9 +194,9 @@ Fraction generate_fractions() {
             } else {
                 // Verify non-trivial cancel is equivalent fraction & reduces initial fraction
                 Fraction fraction(num, dnum);
-                fraction.reduce();
-                if (fraction.is_reduced() && fraction.cancel_digits()) {
-                    cout << "Cancelled fraction: " << fraction << endl;
+                if (fraction.cancel_digits()) {
+                    fraction.reduce();
+                    cout << "Cancelled & reducable fraction: " << fraction << endl;
                     found.push_back(fraction);
                 }
             }
@@ -195,23 +205,23 @@ Fraction generate_fractions() {
         dnum_ten = false;
     }
 
-    Fraction result(1, 1);
+    Fraction final_result(1, 1);
     for (auto ele : found) {
-        result *= ele;
+        final_result *= ele;
     }
 
-    Fraction final_result(result.numerator, result.denomenator);
     final_result.reduce();
     return final_result;
 }
 
 
+// Tests follow.
 TEST(Euler033, MaxFunc) {
-    ASSERT_TRUE(max({44, 75, 2, 44, 99, 5, 33}) == 99);
+    ASSERT_EQ(max({44, 75, 2, 44, 99, 5, 33}), 99);
 }
 
 TEST(Euler033, MinFunc) {
-    ASSERT_TRUE(min({44, 75, 2, 44, 99, 5, 33}) == 2);
+    ASSERT_EQ(min({44, 75, 2, 44, 99, 5, 33}), 2);
 }
 
 TEST(Euler033, GCD) {
@@ -269,4 +279,5 @@ TEST(Euler033, GenerateFractions) {
 
     ASSERT_EQ(result.numerator, 1);
     ASSERT_EQ(result.denomenator, 100);
+    cout << "Value of the denomenator of the fractions multiplied and then reduced is: " << result.denomenator << endl;
 }
