@@ -125,6 +125,22 @@ bool is_prime(T num) {
     return true;
 }
 
+// Determine if a number is pandigital
+template<class T>
+bool is_pandigital(T number) {
+    std::vector<T> digits;
+    std::set<T> no_dupes;
+    while (number != 0) {
+        T digit = number % 10;
+        digits.push_back(digit);
+        no_dupes.insert(digit);
+
+        number /= 10;
+    }
+
+    return digits.size() == no_dupes.size();
+}
+
 /* Only applies to base 10 numbers. */
 template <class T>
 T reverse(T num) {
@@ -160,4 +176,3 @@ bool is_coprime(T num1, T num2) {
 } /* end util:: */
 
 #endif /* _UTIL_HPP_ */
-

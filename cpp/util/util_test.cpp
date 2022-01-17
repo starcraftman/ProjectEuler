@@ -88,3 +88,7 @@ TEST(Util, IsCoprime) {
     ASSERT_FALSE(util::is_coprime(32, 2));
 }
 
+TEST(Util, IsPandigital) {
+    ASSERT_TRUE(util::is_pandigital(2143));
+    ASSERT_FALSE(util::is_pandigital(3331));
+}
