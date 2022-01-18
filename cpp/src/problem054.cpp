@@ -51,15 +51,7 @@ using std::endl;
 typedef std::int8_t num_t;
 static const std::string INPUT = "./src/input_e054.txt";
 static const std::string FIRST_DEAL = "8C TS KC 9H 4S 7D 2S 5D 3S AC";
-static const std::string VAL_ROYAL_FLUSH = "TH JH QH KH AH";
-static const std::string VAL_STRAIGHT_FLUSH = "5H 6H 7H 8H 9H";
-static const std::string VAL_FLUSH = "2H 6H 9H QH AH";
-static const std::string VAL_STRAIGHT = "2H 3D 4S 5C 6C";
 
-/*! \enum Suit
- *
- *  Suits of a card. Colour can be modeled as Red < 3.
- */
 enum Suits {
     Hearts,
     Diamonds,
@@ -78,19 +70,19 @@ enum HandTypes {
     StraightFlush,
     RoyalFlush,
 };
-std::map<std::string, Suits> text_to_suit = {
+static std::map<std::string, Suits> text_to_suit = {
     {"H", Suits::Hearts},
     {"D", Suits::Diamonds},
     {"C", Suits::Clubs},
     {"S", Suits::Spades},
 };
-std::map<Suits, std::string> suit_to_text = {
+static std::map<Suits, std::string> suit_to_text = {
     {Suits::Hearts, "H"},
     {Suits::Diamonds, "D"},
     {Suits::Clubs, "C"},
     {Suits::Spades, "S"},
 };
-std::map<std::string, num_t> face_to_value = {
+static std::map<std::string, num_t> face_to_value = {
     {"2", 2},
     {"3", 3},
     {"4", 4},
@@ -105,7 +97,7 @@ std::map<std::string, num_t> face_to_value = {
     {"K", 13},
     {"A", 14},
 };
-std::map<num_t, std::string> value_to_face = {
+static std::map<num_t, std::string> value_to_face = {
     {2, "2"},
     {3, "3"},
     {4, "4"},
@@ -120,14 +112,47 @@ std::map<num_t, std::string> value_to_face = {
     {13, "K"},
     {14, "A"},
 };
+static std::map<HandTypes, std::string> hand_type_to_text = {
+    {HandTypes::HighCard, "Highest Card"},
+    {HandTypes::OnePair, "One Pair"},
+    {HandTypes::TwoPair, "Two Pairs"},
+    {HandTypes::ThreeKind, "Three of a kind"},
+    {HandTypes::Straight, "Straight"},
+    {HandTypes::Flush, "Flush"},
+    {HandTypes::FullHouse, "Full House"},
+    {HandTypes::FourKind, "Four of a kind"},
+    {HandTypes::StraightFlush, "Straight Flush"},
+    {HandTypes::RoyalFlush, "Royal Flush"},
+};
+
+static const std::string HAND_HIGH_CARD = "2H 2D 4S 5C KC";
+static const std::string HAND_ONE_PAIR = "2H 2D 4S 5C 9C";
+static const std::string HAND_TWO_PAIR = "2H 2D 5C 5S 9C";
+static const std::string HAND_THREE_KIND = "2H 2D 2C 5C 9C";
+static const std::string HAND_STRAIGHT = "2H 3D 4S 5C 6C";
+static const std::string HAND_FLUSH = "2H 6H 9H QH AH";
+static const std::string HAND_FULL_HOUSE = "JH JD JC QH QD";
+static const std::string HAND_FOUR_KIND = "2H 2D 2C 2S 9C";
+static const std::string HAND_STRAIGHT_FLUSH = "5H 6H 7H 8H 9H";
+static const std::string HAND_ROYAL_FLUSH = "TH JH QH KH AH";
 
 class Card
 {
 public:
-    Card () : value(1), suit(Suits::Hearts) {};
-    explicit Card (const std::string &text);
-    Card (const Card &other);
-    void change(const std::string &text);
+    Card () : value(2), suit(Suits::Hearts) {};
+    explicit Card(const std::string &text) {
+        this->change(text);
+    }
+    Card(const Card &other) {
+        this->value = other.value;
+        this->suit = other.suit;
+    }
+    // Constraint: Text is valid. I won't validate. Input guaranteed no dupes nor invalid.
+    void change(const std::string &text) {
+        this->value = face_to_value[text.substr(0, 1)];
+        this->suit = text_to_suit[text.substr(1)];
+        this->selected = false;
+    }
 
     // Mainly for debugging/output
     inline std::string text_value() const { return value_to_face[this->value]; };
@@ -163,10 +188,97 @@ public:
     friend std::ostream& operator<<(std::ostream &os, const Card &card);
     friend std::istream& operator>>(std::istream &is, Card &hand);
 
+    // Data
     num_t value = 1;
     Suits suit = Suits::Hearts;
     bool selected = false;
-private:
+};
+
+class CardGroup {
+public:
+    CardGroup() : type(HandTypes::HighCard) {}
+    explicit CardGroup(const Card &card) : type(HandTypes::HighCard) {
+        this->cards.push_back(card);
+    }
+    // Returns true only if card taken by this group
+    bool check_card(const Card &next_card) {
+        if (this->cards.size() != 0) {
+            Card last = this->cards.back();
+            if (last.value == next_card.value) {
+                this->cards.push_back(next_card);
+                this->set_type();
+                return true;
+            }
+        }
+
+        return false;
+    }
+    void add_card(const Card &next_card) {
+        this->cards.push_back(next_card);
+    }
+    void set_type() {
+        switch (cards.size()) {
+            case 1:
+                this->type = HandTypes::HighCard;
+                break;
+            case 2:
+                this->type = HandTypes::OnePair;
+                break;
+            case 3:
+                this->type = HandTypes::ThreeKind;
+                break;
+            case 4:
+                this->type = HandTypes::FourKind;
+                break;
+        }
+    }
+    int value() const {
+        return cards.back().value;
+    }
+
+    bool operator==(const CardGroup &other) const {
+        return this->type == other.type && this->value() == other.value();
+    }
+    bool operator!=(const CardGroup &other) const {
+        return !(*this == other);
+    }
+    // CardGroups are ordered by type first, then value of set of cards
+    bool operator<=(const CardGroup &other) const {
+        if (this->type == other.type) {
+            return this->value() <= other.value();
+        } else {
+            return this->type <= other.type;
+        }
+    }
+    bool operator<(const CardGroup &other) const {
+        return *this <= other && *this != other;
+    }
+    bool operator>(const CardGroup &other) const {
+        return !(*this <= other);
+    }
+    bool operator>=(const CardGroup &other) const {
+        return !(*this < other);
+    }
+    friend std::ostream& operator<<(std::ostream &os, const CardGroup &group);
+
+    // Data
+    HandTypes type;
+    std::vector<Card> cards;
+};
+
+// Defines the composite type of a hand, reduces everything to a single value.
+// A HandValue can be made of sub groupings of cards (like a pair + one triple = full house).
+// Able to be compared to another HandValue via operators for sorting.
+class HandValue {
+public:
+    HandValue(HandTypes type = HandTypes::HighCard, int value = 2) :
+        type(type), type_value(value) {};
+
+    friend std::ostream& operator<<(std::ostream &os, const Card &card);
+
+    HandTypes type;  // Highest type of hand
+    int type_value;  // Highest card in the grouping (i.e. if StraightFlush of 5, 6, 7, 8, 9
+    std::vector<CardGroup> groups;
 };
 
 class Hand {
@@ -199,23 +311,8 @@ public:
 
     const int player = 1;
     std::vector<Card> cards;
-    HandTypes hand_type;
+    HandValue value;
 };
-
-Card::Card(const std::string &text) {
-    this->change(text);
-}
-
-Card::Card(const Card &other) {
-    this->value = other.value;
-    this->suit = other.suit;
-}
-
-// Constraint: Text is valid. I won't validate.
-void Card::change(const std::string &text) {
-    this->value = face_to_value[text.substr(0, 1)];
-    this->suit = text_to_suit[text.substr(1)];
-}
 
 // Hands must be 5 cards in size, simply update hand once at size.
 std::istream& Hand::read_cards(std::istream &is) {
@@ -252,11 +349,15 @@ std::ostream& operator<<(std::ostream &os, const Hand &hand) {
     return os;
 }
 
+std::ostream& operator<<(std::ostream &os, const CardGroup &group) {
+    os << "Card Group: " << hand_type_to_text[group.type] << " of "
+        << group.cards.back().value << "s.";
+}
+
 std::istream& operator>>(std::istream &is, Card &card) {
     std::string text;
     is >> text;
     card.change(text);
-    card.selected = false;
 
     return is;
 }
@@ -282,6 +383,7 @@ bool detect_royal_flush(Hand &hand) {
         }
     }
 
+    hand.value = HandValue(HandTypes::RoyalFlush, iter->value);
     return true;
 }
 
@@ -296,6 +398,7 @@ bool detect_straight_flush(Hand &hand) {
         }
     }
 
+    hand.value = HandValue(HandTypes::StraightFlush, iter->value);
     return true;
 }
 
@@ -310,6 +413,7 @@ bool detect_straight(Hand &hand) {
         }
     }
 
+    hand.value = HandValue(HandTypes::Straight, iter->value);
     return true;
 }
 
@@ -323,6 +427,7 @@ bool detect_flush(Hand &hand) {
         }
     }
 
+    hand.value = HandValue(HandTypes::Flush, iter->value);
     return true;
 }
 
@@ -342,9 +447,9 @@ int number_won_hands() {
 }
 
 TEST(E054_Card, CardDefault) {
-    Card ace;
-    ASSERT_EQ(ace.value, 1);
-    ASSERT_EQ(ace.suit, Suits::Hearts);
+    Card deuce;
+    ASSERT_EQ(deuce.value, 2);
+    ASSERT_EQ(deuce.suit, Suits::Hearts);
 }
 
 TEST(E054_Card, CardConstructor) {
@@ -452,12 +557,59 @@ TEST(E054_Hand, HandOutputOperator) {
     ASSERT_EQ(ss.str(), expect);
 }
 
+TEST(E054_CardGroup, AddCard) {
+    CardGroup group;
+    group.add_card(Card("8H"));
+    ASSERT_EQ(group.cards.size(), 1);
+    ASSERT_EQ(group.type, HandTypes::HighCard);
+}
+
+TEST(E054_CardGroup, CheckCardValid) {
+    CardGroup group;
+    group.add_card(Card("8H"));
+    ASSERT_TRUE(group.check_card(Card("8D")));
+    ASSERT_EQ(group.type, HandTypes::OnePair);
+    ASSERT_EQ(group.cards.back(), Card("8D"));
+
+    ASSERT_TRUE(group.check_card(Card("8C")));
+    ASSERT_EQ(group.type, HandTypes::ThreeKind);
+    ASSERT_EQ(group.cards.back(), Card("8C"));
+
+    ASSERT_TRUE(group.check_card(Card("8S")));
+    ASSERT_EQ(group.type, HandTypes::FourKind);
+    ASSERT_EQ(group.cards.back(), Card("8S"));
+}
+
+TEST(E054_CardGroup, CheckCardInvalid) {
+    CardGroup group;
+    group.add_card(Card("8H"));
+    ASSERT_FALSE(group.check_card(Card("7D")));
+    ASSERT_EQ(group.type, HandTypes::HighCard);
+    ASSERT_EQ(group.cards.back(), Card("8H"));
+}
+
+TEST(E054_CardGroup, SetType) {
+    CardGroup group;
+    group.add_card(Card("8H"));
+    group.add_card(Card("8D"));
+    group.set_type();
+    ASSERT_EQ(group.type, HandTypes::OnePair);
+
+    group.add_card(Card("8C"));
+    group.set_type();
+    ASSERT_EQ(group.type, HandTypes::ThreeKind);
+
+    group.add_card(Card("8S"));
+    group.set_type();
+    ASSERT_EQ(group.type, HandTypes::FourKind);
+}
+
 // To debug detectors ....
 //cout << "Read hand" << endl << hand << endl << hand2 << endl;
 TEST(E054_HandValue, RoyalFlush) {
     Hand hand(1);
     Hand hand2(2);
-    std::stringstream ss(VAL_ROYAL_FLUSH + " " + VAL_STRAIGHT);
+    std::stringstream ss(HAND_ROYAL_FLUSH + " " + HAND_STRAIGHT);
     ss >> hand >> hand2;
     ASSERT_TRUE(detect_royal_flush(hand));
     ASSERT_FALSE(detect_royal_flush(hand2));
@@ -466,7 +618,7 @@ TEST(E054_HandValue, RoyalFlush) {
 TEST(E054_HandValue, StraightFlush) {
     Hand hand(1);
     Hand hand2(2);
-    std::stringstream ss(VAL_STRAIGHT_FLUSH + " " + VAL_STRAIGHT);
+    std::stringstream ss(HAND_STRAIGHT_FLUSH + " " + HAND_STRAIGHT);
     ss >> hand >> hand2;
     ASSERT_TRUE(detect_straight_flush(hand));
     ASSERT_FALSE(detect_straight_flush(hand2));
@@ -475,7 +627,7 @@ TEST(E054_HandValue, StraightFlush) {
 TEST(E054_HandValue, Straight) {
     Hand hand(1);
     Hand hand2(2);
-    std::stringstream ss(VAL_STRAIGHT + " " + VAL_FLUSH);
+    std::stringstream ss(HAND_STRAIGHT + " " + HAND_FLUSH);
     ss >> hand >> hand2;
     ASSERT_TRUE(detect_straight(hand));
     ASSERT_FALSE(detect_straight(hand2));
@@ -484,7 +636,7 @@ TEST(E054_HandValue, Straight) {
 TEST(E054_HandValue, Flush) {
     Hand hand(1);
     Hand hand2(2);
-    std::stringstream ss(VAL_FLUSH + " " + VAL_STRAIGHT);
+    std::stringstream ss(HAND_FLUSH + " " + HAND_STRAIGHT);
     ss >> hand >> hand2;
     ASSERT_TRUE(detect_flush(hand));
     ASSERT_FALSE(detect_flush(hand2));
