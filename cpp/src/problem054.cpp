@@ -58,6 +58,7 @@ enum Suits {
     Spades,
 };
 enum HandTypes {
+    Unranked,
     HighCard,
     OnePair,
     TwoPair,
@@ -112,6 +113,7 @@ static std::map<num_t, std::string> value_to_face = {
     {14, "A"},
 };
 static std::map<HandTypes, std::string> hand_type_to_text = {
+    {HandTypes::Unranked, "Unranked"},
     {HandTypes::HighCard, "Highest Card"},
     {HandTypes::OnePair, "One Pair"},
     {HandTypes::TwoPair, "Two Pairs"},
@@ -182,7 +184,8 @@ public:
 class CardGroup {
 public:
     CardGroup(HandTypes type = HandTypes::HighCard) : type(type) {}
-    explicit CardGroup(const Card &card) : type(HandTypes::HighCard) {
+    explicit CardGroup(Card &card) : type(HandTypes::HighCard) {
+        card.selected = true;
         this->cards.push_back(card);
     }
     // Returns true only if card taken by this group
@@ -209,11 +212,13 @@ public:
     }
     template <class Iterator>
     CardGroup& add_all(Iterator begin, Iterator end) {
-        this->cards.insert(this->cards.end(), begin, end);
+        while (begin != end) {
+            begin->selected = true;
+            this->cards.push_back(*begin);
+            begin++;
+        }
+        this->set_type();
         return *this;
-    }
-    std::size_t size() {
-        return this->cards.size();
     }
     void set_type() {
         switch (cards.size()) {
@@ -233,6 +238,9 @@ public:
     }
     int value() const {
         return cards.back().value;
+    }
+    std::size_t size() const {
+        return this->cards.size();
     }
 
     bool operator==(const CardGroup &other) const {
@@ -265,19 +273,31 @@ public:
     std::vector<Card> cards;
 };
 
+// In two pairs scenario, low value will be "group".
+// In full house scenario, check if group is triple, otherwise original compution is fine
+inline
+int composite_value(const CardGroup &group, const CardGroup &group2) {
+    int comp_value = 100 * group2.value() + group.value();
+    if (group.type == HandTypes::ThreeKind || (group.type == group2.type && group.value() > group2.value())) {
+        comp_value = 100 * group.value() + group2.value();
+    }
+
+    return comp_value;
+}
+
 // Defines the composite type of a hand, reduces everything to a single value.
-// A HandValue can be made of sub groupings of cards (like a pair + one triple = full house).
-// Able to be compared to another HandValue via operators for sorting.
-class HandValue {
+// A Ranking can be made of sub groupings of cards (like a pair + one triple = full house).
+// Able to be compared to another Ranking via operators for sorting.
+class Ranking {
 public:
-    HandValue(HandTypes type = HandTypes::HighCard, int value = 2) :
-        type(type), type_value(value) {};
+    Ranking(HandTypes type = HandTypes::Unranked, int value = 0) :
+        type(type), value(value) {};
     void add_group(const CardGroup &group) {
         groups.push_back(group);
         if (group.type > this->type ||
-            (group.type == this->type && group.value() > this->type_value)) {
+            (group.type == this->type && group.value() > this->value)) {
             this->type = group.type;
-            this->type_value = group.value();
+            this->value = group.value();
         }
 
         this->check_composite_types();
@@ -299,16 +319,21 @@ public:
             } else if (num_pairs == 1 && num_triples == 1) {
                 this->type = HandTypes::FullHouse;
             }
+
+            this->value = composite_value(this->groups[0], this->groups[1]);
         }
     }
-    bool is_set() {
-        return this->groups.size() != 0;
-    }
 
+    bool operator==(const Ranking &other) const {
+        return this->type == other.type && this->value == other.value;
+    }
+    bool operator!=(const Ranking &other) const {
+        return !(*this == other);
+    }
     friend std::ostream& operator<<(std::ostream &os, const Card &card);
 
     HandTypes type;  // Highest type of hand
-    int type_value;  // Highest card in the grouping (i.e. if StraightFlush of 5, 6, 7, 8, 9
+    int value;  // Highest card in the grouping (i.e. 9 if StraightFlush of 5, 6, 7, 8, 9
     std::vector<CardGroup> groups;
 };
 
@@ -319,7 +344,64 @@ public:
     void sort() {
         std::stable_sort(this->cards.begin(), this->cards.end());
     }
-    void detect_hand_value();
+    void detect_ranking();
+    bool beats(const Hand &other) const {
+        if (this->rank.type > other.rank.type) {
+            return true;
+        } else if (this->rank.type == other.rank.type) {
+            if (this->rank.value > other.rank.value) {
+                return true;
+            } else if (this->rank.value == other.rank.value) {
+                return break_tie(other);
+            }
+        }
+
+        return false;
+    }
+    bool break_tie(const Hand &other) const {
+        int offset = 0;
+        do {
+            int this_high = this->unselected_card(offset);
+            int other_high = other.unselected_card(offset);
+
+            // Tied completely
+            if (this_high == other_high) {
+                if (this_high == 0) {
+                    break;
+                } else {
+                    continue; // Tied on first value, keep going
+                }
+            } else {
+                return this_high > other_high;
+            }
+
+        } while (++offset != 4);
+
+        // FIXME: Solution would require some tie state
+        // I call a tie a loss, input states no absolute ties so fine.
+        return false;
+    }
+    // Scan down cards, return first unselected one, 0 if none left
+    num_t unselected_card(int offset = 0) const {
+        auto iter = cards.crbegin();
+        while (iter != cards.crend()) {
+            if (!iter->selected) {
+                if (offset <= 0) {
+                    return iter->value;
+                } else {
+                    offset -= 1;
+                }
+            }
+            iter++;
+        }
+
+        return 0;
+    }
+    void reset_selections() {
+        for (Card &card : this->cards) {
+            card.selected = false;
+        }
+    }
 
     bool operator==(const Hand &other) const {
         if (this->cards.size() != other.cards.size()) {
@@ -343,7 +425,7 @@ public:
 
     const int player = 1;
     std::vector<Card> cards;
-    HandValue value;
+    Ranking rank;
 };
 
 // Hands must be 5 cards in size, simply update hand once at size.
@@ -363,7 +445,7 @@ std::istream& Hand::read_cards(std::istream &is) {
         iter++;
     }
     this->sort();
-    this->value = HandValue();
+    this->rank = Ranking();
 
     return is;
 }
@@ -376,14 +458,18 @@ std::ostream& operator<<(std::ostream &os, const Card &card) {
 std::ostream& operator<<(std::ostream &os, const Hand &hand) {
     os << "Player " << hand.player << " has: ";
     for (auto card : hand.cards) {
-        os << card << " ";
+        os << card;
+        if (card.selected) {
+            os << "*";
+        }
+        os << " ";
     }
 
     return os;
 }
 
 std::ostream& operator<<(std::ostream &os, const CardGroup &group) {
-    os << "Group: " << hand_type_to_text[group.type] << " ( ";
+    os << "    " << hand_type_to_text[group.type] << " ( ";
     for (auto card : group.cards) {
         os << card << " ";
     }
@@ -391,12 +477,12 @@ std::ostream& operator<<(std::ostream &os, const CardGroup &group) {
     return os;
 }
 
-std::ostream& operator<<(std::ostream &os, const HandValue &hand_value) {
-    os << "Value of hand: " << hand_type_to_text[hand_value.type] << " of "
-        << hand_value.type_value << endl;
+std::ostream& operator<<(std::ostream &os, const Ranking &ranking) {
+    os << "Value of hand: " << hand_type_to_text[ranking.type] << " of "
+        << ranking.value << endl;
 
     os << "Has following card groupings:" << endl;
-    for (auto group : hand_value.groups) {
+    for (auto group : ranking.groups) {
         os << group << endl;
     }
     return os;
@@ -431,7 +517,7 @@ bool detect_royal_flush(Hand &hand) {
         }
     }
 
-    hand.value.add_group(
+    hand.rank.add_group(
         CardGroup(HandTypes::RoyalFlush).add_all(
         hand.cards.begin(), hand.cards.end())
     );
@@ -449,7 +535,7 @@ bool detect_straight_flush(Hand &hand) {
         }
     }
 
-    hand.value.add_group(
+    hand.rank.add_group(
         CardGroup(HandTypes::StraightFlush).add_all(
         hand.cards.begin(), hand.cards.end())
     );
@@ -466,7 +552,7 @@ bool detect_flush(Hand &hand) {
         }
     }
 
-    hand.value.add_group(
+    hand.rank.add_group(
         CardGroup(HandTypes::Flush).add_all(
         hand.cards.begin(), hand.cards.end())
     );
@@ -484,7 +570,7 @@ bool detect_straight(Hand &hand) {
         }
     }
 
-    hand.value.add_group(
+    hand.rank.add_group(
         CardGroup(HandTypes::Straight).add_all(
         hand.cards.begin(), hand.cards.end())
     );
@@ -493,36 +579,38 @@ bool detect_straight(Hand &hand) {
 
 // Detects the following:
 //      four of a kind, full house, three of a kind, two pair, one pair,
+// Constraint: Cards must be sorted.
 bool detect_pairs(Hand &hand) {
     CardGroup current_group;
-    auto iter = hand.cards.begin();
-    Card last_card(*iter);
+    auto last_card = hand.cards.begin();
+    auto card = hand.cards.begin();
 
-    while (++iter != hand.cards.end()) {
+    while (++card != hand.cards.end()) {
         // Different card seen
-        if (iter->value != last_card.value) {
+        if (card->value != last_card->value) {
             if (current_group.size() >= 2) {
-                hand.value.add_group(current_group);
+                hand.rank.add_group(current_group);
             }
             current_group = CardGroup();
         }
 
         // Last two cards or more same, bunch in group
-        if (iter->value == last_card.value) {
+        if (card->value == last_card->value) {
             if (current_group.size() == 0) {
-                current_group.add_card(last_card);
+                current_group.add_card(*last_card);
             }
-            current_group.check_card(*iter);
+            current_group.add_card(*card);
         }
 
-        last_card = Card(*iter);
+        // Always points one behind real card
+        last_card++;
     }
 
     if (current_group.size() >= 2) {
-        hand.value.add_group(current_group);
+        hand.rank.add_group(current_group);
     }
 
-    return hand.value.groups.size() != 0;
+    return hand.rank.groups.size() != 0;
 }
 
 bool detect_high_card(Hand &hand) {
@@ -535,7 +623,7 @@ bool detect_high_card(Hand &hand) {
         }
     }
 
-    hand.value.add_group(
+    hand.rank.add_group(
         CardGroup(HandTypes::HighCard).add_card(highest)
     );
     return true;
@@ -545,7 +633,7 @@ bool detect_high_card(Hand &hand) {
 typedef bool func_detect_t(Hand &);
 typedef func_detect_t* pfunc_detect;
 // Run through detection list from highest value to least.
-void Hand::detect_hand_value() {
+void Hand::detect_ranking() {
     std::initializer_list<pfunc_detect> func_ptrs = {
         detect_royal_flush,
         detect_straight_flush,
@@ -564,20 +652,19 @@ void Hand::detect_hand_value() {
 int number_won_hands() {
     int player_1_won = 0;
 
-    Hand hand1(1), hand2(2);
+    Hand hand(1), hand2(2);
     try {
         std::ifstream input(INPUT, std::ifstream::in);
         while (input) {
-            input >> hand1 >> hand2;
-            hand1.detect_hand_value();
-            hand2.detect_hand_value();
-            cout << hand1 << endl << hand1.value << endl
-                << hand2 << endl << hand2.value << endl;
-
-            // TODO: Compare hand values
+            input >> hand >> hand2;
+            hand.detect_ranking();
+            hand2.detect_ranking();
+            if (hand.beats(hand2)) {
+                player_1_won++;
+            }
         }
     } catch (std::exception &e) {
-        // Input gone bad, ignore.
+        // Input gone bad, ignore it is end of stream.
     }
 
     return player_1_won;
@@ -597,14 +684,17 @@ static const std::string HAND_FULL_HOUSE = "JH JD JC QH QD";
 static const std::string HAND_FOUR_KIND = "2H 2D 2C 2S 9C";
 static const std::string HAND_STRAIGHT_FLUSH = "5H 6H 7H 8H 9H";
 static const std::string HAND_ROYAL_FLUSH = "TH JH QH KH AH";
+static const std::string HAND_PLAYER_1_TIE_BREAK = "4D 6S 9H QH QC 3D 6D 7H QD QS";
+static const std::string HAND_PLAYER_1_HIGHEST = "5D 8C 9S JS AC 2C 5C 7D 8S QH";
+static const std::string HAND_PLAYER_2_HIGH_PAIR = "5H 5C 6S 7S KD 2C 3S 8S 8D TD";
 
-TEST(E054_Card, CardDefault) {
+TEST(E054_Card, Default) {
     Card deuce;
     ASSERT_EQ(deuce.value, 2);
     ASSERT_EQ(deuce.suit, Suits::Hearts);
 }
 
-TEST(E054_Card, CardConstructor) {
+TEST(E054_Card, Constructor) {
     Card ace("AC");
     ASSERT_EQ(ace.value, 14);
     ASSERT_EQ(ace.suit, Suits::Clubs);
@@ -617,7 +707,7 @@ TEST(E054_Card, CardChange) {
     ASSERT_EQ(ace.suit, Suits::Diamonds);
 }
 
-TEST(E054_Card, CardInputOperator) {
+TEST(E054_Card, InputOperator) {
     Card ace("AC");
     std::stringstream ss("TD");
     ss >> ace;
@@ -625,26 +715,26 @@ TEST(E054_Card, CardInputOperator) {
     ASSERT_EQ(ace.suit, Suits::Diamonds);
 }
 
-TEST(E054_Card, CardOutputOperator) {
+TEST(E054_Card, OutputOperator) {
     Card ace("TD");
     std::stringstream ss;
     ss << ace;
     ASSERT_EQ(ss.str(), std::string("TD"));
 }
 
-TEST(E054_Card, CardEqualityOperator) {
+TEST(E054_Card, EqualityOperator) {
     const Card ace("TD");
     const Card also_ace("TD");
     ASSERT_EQ(ace, also_ace);
 }
 
-TEST(E054_Card, CardNotEqualyOperator) {
+TEST(E054_Card, NotEqualOperator) {
     const Card ace("TD");
     const Card not_ace("QH");
     ASSERT_TRUE(ace != not_ace);
 }
 
-TEST(E054_Card, CardLessOperator) {
+TEST(E054_Card, LessOperator) {
     const Card nine("9D");
     const Card ten("TD");
     ASSERT_TRUE(nine < ten);
@@ -652,68 +742,19 @@ TEST(E054_Card, CardLessOperator) {
     ASSERT_TRUE(nine_hearts < nine);
 }
 
-TEST(E054_Card, CardTextValue) {
+TEST(E054_Card, TextValue) {
     Card card("TD");
     ASSERT_EQ(card.text_value(), std::string("T"));
 }
 
-TEST(E054_Card, CardTextSuit) {
+TEST(E054_Card, TextSuit) {
     Card card("TD");
     ASSERT_EQ(card.text_suit(), std::string("D"));
 }
 
-TEST(E054_Card, CardToText) {
+TEST(E054_Card, ToText) {
     Card card("TD");
     ASSERT_EQ(card.to_text(), std::string("TD"));
-}
-
-TEST(E054_Hand, HandCreation) {
-    Hand hand;
-    ASSERT_EQ(hand.player, 1);
-    ASSERT_EQ(hand.cards.size(), 0);
-}
-
-TEST(E054_Hand, HandSortValues) {
-    Hand hand;
-    std::stringstream(FIRST_DEAL) >> hand;
-    hand.sort();
-    std::stringstream ss;
-    ss << hand;
-    std::string expect("Player 1 has: 4S 8C 9H TS KC ");
-    ASSERT_EQ(ss.str(), expect);
-}
-
-TEST(E054_Hand, HandSortValueAndSuit) {
-    Hand hand;
-    std::stringstream("KD JS KS JH JD") >> hand;
-    hand.sort();
-    std::stringstream ss;
-    ss << hand;
-    std::string expect("Player 1 has: JH JD JS KD KS ");
-    ASSERT_EQ(ss.str(), expect);
-}
-
-TEST(E054_Hand, HandDetectHandValue) {
-    Hand hand;
-    std::stringstream(HAND_STRAIGHT) >> hand;
-    hand.detect_hand_value();
-    ASSERT_EQ(hand.value.type, HandTypes::Straight);
-}
-
-TEST(E054_Hand, HandInputOperator) {
-    Hand hand;
-    std::stringstream(FIRST_DEAL) >> hand;
-    ASSERT_EQ(hand.player, 1);
-    ASSERT_EQ(hand.cards[0], Card("4S"));
-}
-
-TEST(E054_Hand, HandOutputOperator) {
-    Hand hand;
-    std::stringstream(FIRST_DEAL) >> hand;
-    std::stringstream ss;
-    ss << hand;
-    std::string expect("Player 1 has: 4S 8C 9H TS KC ");
-    ASSERT_EQ(ss.str(), expect);
 }
 
 TEST(E054_CardGroup, AddCard) {
@@ -771,7 +812,7 @@ TEST(E054_CardGroup, SetType) {
     ASSERT_EQ(group.type, HandTypes::FourKind);
 }
 
-TEST(E054_CardGroup, CardGroupOutputOperator) {
+TEST(E054_CardGroup, OutputOperator) {
     CardGroup group;
     Card card = Card("8H");
     group.add_card(card);
@@ -785,7 +826,199 @@ TEST(E054_CardGroup, CardGroupOutputOperator) {
 
     std::stringstream ss;
     ss << group;
-    ASSERT_EQ(ss.str(), std::string("Group: Four of a kind ( 8H 8D 8C 8S )"));
+    ASSERT_EQ(ss.str(), std::string("    Four of a kind ( 8H 8D 8C 8S )"));
+}
+
+TEST(E054_Ranking, Default) {
+    Ranking rank;
+    ASSERT_EQ(rank.type, HandTypes::Unranked);
+    ASSERT_EQ(rank.value, 0);
+}
+
+TEST(E054_Ranking, Constructor) {
+    Ranking rank(HandTypes::Flush, 9);
+    ASSERT_EQ(rank.type, HandTypes::Flush);
+    ASSERT_EQ(rank.value, 9);
+}
+
+TEST(E054_Ranking, AddGroup) {
+    Ranking rank;
+    Card card("9H"), card2("9D"), card3("9C"), card4("KS");
+    rank.add_group(
+        CardGroup().add_card(card4)
+    );
+    rank.add_group(
+        CardGroup().add_card(card).add_card(card2).add_card(card3)
+    );
+    ASSERT_EQ(rank.type, HandTypes::ThreeKind);
+    ASSERT_EQ(rank.value, 913);
+}
+
+TEST(E054_Ranking, CheckCompositesTwoPair) {
+    Ranking rank;
+    Card card("9H"), card2("9D"), card3("KC"), card4("KS");
+    rank.add_group(
+        CardGroup().add_card(card).add_card(card2)
+    );
+    rank.add_group(
+        CardGroup().add_card(card3).add_card(card4)
+    );
+    ASSERT_EQ(rank.type, HandTypes::TwoPair);
+    ASSERT_EQ(rank.value, 1309);
+}
+
+TEST(E054_Ranking, CheckCompositesFullHouse) {
+    Ranking rank;
+    Card card("9H"), card2("9D"), card3("KC"), card4("KS"), card5("KH");
+    rank.add_group(
+        CardGroup().add_card(card).add_card(card2)
+    );
+    rank.add_group(
+        CardGroup().add_card(card3).add_card(card4).add_card(card5)
+    );
+    ASSERT_EQ(rank.type, HandTypes::FullHouse);
+    ASSERT_EQ(rank.value, 1309);
+}
+
+TEST(E054_Ranking, CompositeValue) {
+    Hand hand;
+    std::stringstream(HAND_TWO_PAIR) >> hand;
+    hand.detect_ranking();
+    ASSERT_EQ(composite_value(hand.rank.groups[0], hand.rank.groups[1]), 502);
+}
+
+TEST(E054_Ranking, OutputOperator) {
+    Hand hand;
+    std::stringstream(HAND_STRAIGHT) >> hand;
+    hand.detect_ranking();
+    std::stringstream ss;
+    ss << hand.rank;
+    std::string expect = "Value of hand: Straight of 6\nHas following card groupings:\n    Straight ( 2H 3D 4S 5C 6C )\n";
+    ASSERT_EQ(ss.str(), expect);
+}
+
+TEST(E054_Ranking, EqualityOperator) {
+    Hand hand(1), hand2(2);
+    std::stringstream ss(std::string("2H 2D 4S 4C KC 2C 2S 4H 4D KH"));
+    ss >> hand >> hand2;
+    hand.detect_ranking();
+    hand2.detect_ranking();
+    ASSERT_TRUE(hand.rank == hand2.rank);
+}
+
+TEST(E054_Ranking, NotEqualOperator) {
+    Hand hand(1), hand2(2);
+    std::stringstream ss(std::string("2H 2D 4S 4C 9C 2C 2S 3H 3D KH"));
+    ss >> hand >> hand2;
+    hand.detect_ranking();
+    hand2.detect_ranking();
+    ASSERT_TRUE(hand.rank != hand2.rank);
+}
+
+TEST(E054_Hand, Creation) {
+    Hand hand;
+    ASSERT_EQ(hand.player, 1);
+    ASSERT_EQ(hand.cards.size(), 0);
+}
+
+TEST(E054_Hand, SortValues) {
+    Hand hand;
+    std::stringstream(FIRST_DEAL) >> hand;
+    hand.sort();
+    std::stringstream ss;
+    ss << hand;
+    std::string expect("Player 1 has: 4S 8C 9H TS KC ");
+    ASSERT_EQ(ss.str(), expect);
+}
+
+TEST(E054_Hand, SortValueAndSuit) {
+    Hand hand;
+    std::stringstream("KD JS KS JH JD") >> hand;
+    hand.sort();
+    std::stringstream ss;
+    ss << hand;
+    std::string expect("Player 1 has: JH JD JS KD KS ");
+    ASSERT_EQ(ss.str(), expect);
+}
+
+TEST(E054_Hand, DetectRanking) {
+    Hand hand;
+    std::stringstream(HAND_STRAIGHT) >> hand;
+    hand.detect_ranking();
+    ASSERT_EQ(hand.rank.type, HandTypes::Straight);
+}
+
+TEST(E054_Hand, InputOperator) {
+    Hand hand;
+    std::stringstream(FIRST_DEAL) >> hand;
+    ASSERT_EQ(hand.player, 1);
+    ASSERT_EQ(hand.cards[0], Card("4S"));
+}
+
+TEST(E054_Hand, OutputOperator) {
+    Hand hand;
+    std::stringstream(FIRST_DEAL) >> hand;
+    std::stringstream ss;
+    ss << hand;
+    std::string expect("Player 1 has: 4S 8C 9H TS KC ");
+    ASSERT_EQ(ss.str(), expect);
+}
+
+TEST(E054_Hand, BeatsRank) {
+    Hand hand(1), hand2(2);
+    std::stringstream ss(HAND_ONE_PAIR + " " + HAND_STRAIGHT);
+    ss >> hand >> hand2;
+    hand.detect_ranking();
+    hand2.detect_ranking();
+    ASSERT_FALSE(hand.beats(hand2));
+    ASSERT_TRUE(hand2.beats(hand));
+}
+
+TEST(E054_Hand, BeatsValue) {
+    Hand hand(1), hand2(2);
+    std::stringstream ss(std::string("2H 4D 4S 5C 9C") + " " + HAND_ONE_PAIR);
+    ss >> hand >> hand2;
+    hand.detect_ranking();
+    hand2.detect_ranking();
+    ASSERT_TRUE(hand.beats(hand2));
+    ASSERT_FALSE(hand2.beats(hand));
+}
+
+// TODO: Tie goes to tie_break_other
+TEST(E054_Hand, BeatsTie) {
+    Hand hand(1), hand2(2);
+    std::stringstream ss(std::string("2H 2D 4S 4C 9C 2C 2S 4H 4D KH"));
+    ss >> hand >> hand2;
+    hand.detect_ranking();
+    hand2.detect_ranking();
+    ASSERT_FALSE(hand.beats(hand2));
+    ASSERT_TRUE(hand2.beats(hand));
+}
+
+TEST(E054_Hand, BreakTie) {
+    Hand hand;
+    std::stringstream(HAND_ONE_PAIR) >> hand;
+    hand.detect_ranking();
+}
+
+TEST(E054_Hand, UnselectedCard) {
+    Hand hand;
+    std::stringstream(HAND_ONE_PAIR) >> hand;
+    hand.detect_ranking();
+    ASSERT_EQ(hand.unselected_card(0), 9);
+    ASSERT_EQ(hand.unselected_card(1), 5);
+    ASSERT_EQ(hand.unselected_card(2), 4);
+    ASSERT_EQ(hand.unselected_card(3), 0);
+}
+
+TEST(E054_Hand, Resetselections) {
+    Hand hand;
+    std::stringstream(HAND_ONE_PAIR) >> hand;
+    hand.detect_ranking();
+    hand.reset_selections();
+    for (Card &card : hand.cards) {
+        ASSERT_FALSE(card.selected);
+    }
 }
 
 // To debug detectors ....
@@ -795,96 +1028,136 @@ TEST(E054_DetectCards, HighCard) {
     std::stringstream ss(HAND_HIGH_CARD);
     ss >> hand;
     ASSERT_TRUE(detect_high_card(hand));
-    ASSERT_EQ(hand.value.type_value, face_to_value["K"]);
+    ASSERT_EQ(hand.rank.type, HandTypes::HighCard);
+    ASSERT_EQ(hand.rank.value, face_to_value["K"]);
 }
 
 TEST(E054_DetectCards, OnePair) {
-    Hand hand(1);
-    Hand hand2(2);
+    Hand hand(1), hand2(2);
     std::stringstream ss(HAND_ONE_PAIR + " " + HAND_STRAIGHT);
     ss >> hand >> hand2;
     ASSERT_TRUE(detect_pairs(hand));
-    ASSERT_EQ(hand.value.type, HandTypes::OnePair);
+    ASSERT_EQ(hand.rank.type, HandTypes::OnePair);
+    int cnt = 0;
+    for (auto card : hand.cards) {
+        if (card.selected) {
+            cnt++;
+        }
+    }
+    ASSERT_EQ(cnt, 2);
     ASSERT_FALSE(detect_pairs(hand2));
 }
 
 TEST(E054_DetectCards, TwoPair) {
-    Hand hand(1);
-    Hand hand2(2);
+    Hand hand(1), hand2(2);
     std::stringstream ss(HAND_TWO_PAIR + " " + HAND_STRAIGHT);
     ss >> hand >> hand2;
     ASSERT_TRUE(detect_pairs(hand));
-    ASSERT_EQ(hand.value.type, HandTypes::TwoPair);
+    ASSERT_EQ(hand.rank.type, HandTypes::TwoPair);
+    int cnt = 0;
+    for (auto card : hand.cards) {
+        if (card.selected) {
+            cnt++;
+        }
+    }
+    ASSERT_EQ(cnt, 4);
     ASSERT_FALSE(detect_pairs(hand2));
 }
 
 TEST(E054_DetectCards, ThreeKind) {
-    Hand hand(1);
-    Hand hand2(2);
+    Hand hand(1), hand2(2);
     std::stringstream ss(HAND_THREE_KIND + " " + HAND_STRAIGHT);
     ss >> hand >> hand2;
     ASSERT_TRUE(detect_pairs(hand));
-    ASSERT_EQ(hand.value.type, HandTypes::ThreeKind);
+    ASSERT_EQ(hand.rank.type, HandTypes::ThreeKind);
+    int cnt = 0;
+    for (auto card : hand.cards) {
+        if (card.selected) {
+            cnt++;
+        }
+    }
+    ASSERT_EQ(cnt, 3);
     ASSERT_FALSE(detect_pairs(hand2));
 }
 
 TEST(E054_DetectCards, Straight) {
-    Hand hand(1);
-    Hand hand2(2);
+    Hand hand(1), hand2(2);
     std::stringstream ss(HAND_STRAIGHT + " " + HAND_FLUSH);
     ss >> hand >> hand2;
     ASSERT_TRUE(detect_straight(hand));
+    ASSERT_EQ(hand.rank.type, HandTypes::Straight);
+    for (auto card : hand.cards) {
+        ASSERT_TRUE(card.selected);
+    }
     ASSERT_FALSE(detect_straight(hand2));
 }
 
 TEST(E054_DetectCards, Flush) {
-    Hand hand(1);
-    Hand hand2(2);
+    Hand hand(1), hand2(2);
     std::stringstream ss(HAND_FLUSH + " " + HAND_STRAIGHT);
     ss >> hand >> hand2;
     ASSERT_TRUE(detect_flush(hand));
+    ASSERT_EQ(hand.rank.type, HandTypes::Flush);
+    for (auto card : hand.cards) {
+        ASSERT_TRUE(card.selected);
+    }
     ASSERT_FALSE(detect_flush(hand2));
 }
 
 TEST(E054_DetectCards, FullHouse) {
-    Hand hand(1);
-    Hand hand2(2);
+    Hand hand(1), hand2(2);
     std::stringstream ss(HAND_FULL_HOUSE + " " + HAND_STRAIGHT);
     ss >> hand >> hand2;
     ASSERT_TRUE(detect_pairs(hand));
-    ASSERT_EQ(hand.value.type, HandTypes::FullHouse);
+    ASSERT_EQ(hand.rank.type, HandTypes::FullHouse);
+    for (auto card : hand.cards) {
+        ASSERT_TRUE(card.selected);
+    }
     ASSERT_FALSE(detect_pairs(hand2));
 }
 
 TEST(E054_DetectCards, FourKind) {
-    Hand hand(1);
-    Hand hand2(2);
+    Hand hand(1), hand2(2);
     std::stringstream ss(HAND_FOUR_KIND + " " + HAND_STRAIGHT);
     ss >> hand >> hand2;
     ASSERT_TRUE(detect_pairs(hand));
-    ASSERT_EQ(hand.value.type, HandTypes::FourKind);
+    ASSERT_EQ(hand.rank.type, HandTypes::FourKind);
+    int cnt = 0;
+    for (auto card : hand.cards) {
+        if (card.selected) {
+            cnt++;
+        }
+    }
+    ASSERT_EQ(cnt, 4);
     ASSERT_FALSE(detect_pairs(hand2));
 }
 
 TEST(E054_DetectCards, StraightFlush) {
-    Hand hand(1);
-    Hand hand2(2);
+    Hand hand(1), hand2(2);
     std::stringstream ss(HAND_STRAIGHT_FLUSH + " " + HAND_STRAIGHT);
     ss >> hand >> hand2;
     ASSERT_TRUE(detect_straight_flush(hand));
+    ASSERT_EQ(hand.rank.type, HandTypes::StraightFlush);
+    for (auto card : hand.cards) {
+        ASSERT_TRUE(card.selected);
+    }
     ASSERT_FALSE(detect_straight_flush(hand2));
 }
 
 TEST(E054_DetectCards, RoyalFlush) {
-    Hand hand(1);
-    Hand hand2(2);
+    Hand hand(1), hand2(2);
     std::stringstream ss(HAND_ROYAL_FLUSH + " " + HAND_STRAIGHT);
     ss >> hand >> hand2;
     ASSERT_TRUE(detect_royal_flush(hand));
+    ASSERT_EQ(hand.rank.type, HandTypes::RoyalFlush);
+    for (auto card : hand.cards) {
+        ASSERT_TRUE(card.selected);
+    }
     ASSERT_FALSE(detect_royal_flush(hand2));
 }
 
-// TEST(Euler054, NumberWonHands) {
-    // int result = number_won_hands();
-    // cout << "The number of hands player 1 won is: " << result << endl;
-// }
+TEST(Euler054, NumberWonHands) {
+    int result = number_won_hands();
+    ASSERT_EQ(result, 376);
+    cout << "The number of hands player 1 won is: " << result << endl;
+}
