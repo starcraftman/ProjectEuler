@@ -54,6 +54,11 @@ int sort_digits(int num) {
     return sorted_num;
 }
 
+/*
+ * Search a limitted set of primes that are permutations.
+ * Determine if a gap between any 3 exists that is equal.
+ * If so return the string concatenation of the 3 primes found.
+ */
 std::string search_permutation_gap(const std::vector<int> &primes) {
     // Find ends for inner loops
     auto two_before_end = primes.cbegin();
@@ -93,7 +98,9 @@ end_loops:
     return found;
 }
 
-// primes_map, map of the SORTED digits, to prime permutations.
+/*
+ * Search across all prime permutations for the answer.
+ */
 std::vector<std::string> search_prime_permutations(const std::vector<int> &primes) {
     std::map<int, std::vector<int>> primes_map;
 
@@ -119,18 +126,6 @@ std::vector<std::string> search_prime_permutations(const std::vector<int> &prime
     return found;
 }
 
-std::string prime_permutation_string() {
-    auto primes = generate_prime_list(1000, 10000);
-    std::vector<std::string> found = search_prime_permutations(primes);
-    for (auto word : found) {
-        if (word.find("1487") == std::string::npos) {
-            return word;
-        }
-    }
-
-    return "0";
-}
-
 TEST(Euler049, GenPrimeList) {
     std::vector<int> primes = generate_prime_list(1000, 10000);
     ASSERT_EQ(primes.front(), 1009);
@@ -149,7 +144,16 @@ TEST(Euler049, SearchPermutationGap) {
 }
 
 TEST(Euler054, PrimePermutationsConcatenation) {
-    std::string result = prime_permutation_string();
+    auto primes = generate_prime_list(1000, 10000);
+    std::vector<std::string> found = search_prime_permutations(primes);
+
+    std::string result;
+    for (auto word : found) {
+        // Exclude this one, mentioned in problem.
+        if (word.find("1487") == std::string::npos) {
+            result = word;
+        }
+    }
     cout << "The prime permutations string is: " << result << endl;
     ASSERT_EQ(result, std::string("296962999629"));
 }
