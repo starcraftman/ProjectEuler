@@ -7,6 +7,7 @@ in matrix.txt (right click and "Save Link/Target As..."), a 31K text file contai
 /********************* Header Files ***********************/
 /* C++ Headers */
 #include <iostream> /* Input/output objects. */
+#include <iomanip>
 #include <fstream>
 #include <sstream>
 #include <exception>
@@ -25,6 +26,7 @@ using std::endl;
 
 /************** Global Vars & Functions *******************/
 static const std::string INPUT = "./src/input_e081.txt";
+static const std::string INPUT_SMALL = "./src/input_e081.small.txt";
 
 class Node;
 class Node {
@@ -38,7 +40,8 @@ public:
     Node *right = NULL;
     Node *down = NULL;
 };
-Node nodes[80][80];
+typedef std::vector<std::vector<Node> > vec_node_t;
+typedef std::map<const Node*, int> memo_t;
 
 std::ostream & operator<<(std::ostream& os, const Node &node) {
     int right = 0;
@@ -49,28 +52,9 @@ std::ostream & operator<<(std::ostream& os, const Node &node) {
     if (node.down != NULL) {
         down = node.down->value;
     }
-    os << "Node: " << node.value << " > "
-        << right << " d " << down;
+    os << "Node: " << node.value << " > " << right << " d " << down;
 
     return os;
-}
-
-/*
- * Read in the value of a node and connect it right and down if required.
- */
-void connect_row(int row, const std::string &line) {
-    std::stringstream ss(line);
-    int col = -1;
-    // Starts at col == 1, so always one node ahead.
-    while (++col != 80) {
-        ss >> nodes[row][col].value;
-        if (col < 79) {
-            nodes[row][col].right = & nodes[row][col + 1];
-        }
-        if (row < 79) {
-            nodes[row][col].down = & nodes[row + 1][col];
-        }
-    }
 }
 
 /*
@@ -89,68 +73,101 @@ std::string replace_all(std::string &original,
 }
 
 /*
- * Read all nodes from matrix file into nodes array.
- * Ensure connections setup too.
+ * Read in the value of a line of nodes.
  */
-void read_in_nodes() {
-    std::ifstream input(INPUT, std::ifstream::in);
+void read_line_nodes(const std::string &line, vec_node_t &nodes) {
+    std::stringstream ss(line);
+    std::vector<Node> row;
+    while (ss) {
+        Node node;
+        ss >> node.value;
+        if (node.value) {
+            row.push_back(node);
+        }
+    }
+
+    nodes.push_back(row);
+}
+
+/*
+ * Read all nodes from file into nodes.
+ */
+void read_all_nodes(const std::string &fname, vec_node_t &nodes) {
+    std::ifstream input(fname, std::ifstream::in);
     std::string line;
-    int row = 0;
     while (std::getline(input, line)) {
-        connect_row(row++, replace_all(line, ",", " "));
+        read_line_nodes(replace_all(line, ",", " "), nodes);
+    }
+}
+
+/*
+ * Connect all points to the right and down in the nodes.
+ * Treat the operation as using index positions.
+ */
+void connect_nodes(vec_node_t &nodes) {
+    std::size_t row = 0;
+    const std::size_t last_row_ind = nodes.size() - 1;
+    while (row != nodes.size()) {
+        const std::size_t last_col_ind = nodes[row].size() - 1;
+        std::size_t col = 0;
+        const std::size_t last_row = row - 1;
+
+        while (col != nodes[row].size()) {
+            if (col != last_col_ind) {
+                nodes[row][col].right = &nodes[row][col + 1];
+            }
+            if (row < last_row_ind) {
+                nodes[row][col].down = &nodes[row + 1][col];
+            }
+
+            ++col;
+        }
+
+        ++row;
     }
 }
 
 /*
  * Debug only, prints whole matrix of nodes.
  */
-void print_matrix() {
-    for (int row = 0; row < 80; ++row) {
-        for (int col = 0; col < 80; ++col) {
-            cout << nodes[row][col] << endl;
+void print_matrix(std::ostream &os, const vec_node_t &nodes, bool pointers = false) {
+    for (auto row : nodes) {
+        for (auto node: row) {
+            os << std::setfill('0') << std::setw(4);
+            if (pointers) {
+                os << node;
+            } else {
+                os << node.value;
+            }
+            os << " ";
         }
-        break;
+        os << endl;
     }
 }
 
-/*
- * Simple tracker for sum and taken nodes.
- */
-class PathTrack {
-public:
-    void add(const Node &node) {
-        this->nodes.push_back(node.value);
-    };
-    int sum() {
-        return std::accumulate(nodes.cbegin(), nodes.cend(), 0);
+int explore_path(const Node &node, memo_t &memo) {
+    if (memo[&node] != 0) {
+        return memo[&node];
     }
-    std::vector<int> nodes;
-};
 
-PathTrack sum_two_ways_path() {
-    read_in_nodes();
-    // Start in top left and go down or right, min value
-    PathTrack track;
-    Node *current = &nodes[0][0];
-    track.add(*current);
-
-    while (current->down != NULL || current->right != NULL) {
-        if (current->down == NULL) {
-            current = current->right;
-        } else if (current->right == NULL) {
-            current = current->down;
-        } else {
-            if (current->right->value <= current->down->value) {
-                current = current->right;
-            } else {
-                current = current->down;
-            }
-        }
-        track.add(*current);
+    if (node.right == NULL && node.down == NULL) {
+        return node.value;
     }
-    // Must be at bottom right node, add last.
 
-    return track;
+    int min_got = 0;
+    if (node.right != NULL && node.down == NULL) {
+        min_got = explore_path(*node.right, memo);
+    } else if (node.right == NULL && node.down != NULL) {
+        min_got = explore_path(*node.down, memo);
+    } else {
+        min_got = std::min(
+            explore_path(*node.right, memo),
+            explore_path(*node.down, memo)
+        );
+    }
+
+    memo[&node] = node.value + min_got;
+    return memo[&node];
 }
 
 TEST(Euler081, ReplaceAll) {
@@ -159,21 +176,48 @@ TEST(Euler081, ReplaceAll) {
     ASSERT_EQ(replace_all(input, ",", " "), expect);
 }
 
-TEST(Euler081, ConnectRow) {
-    read_in_nodes();
-    ASSERT_EQ(nodes[0][79].value, 5870);
-    ASSERT_EQ(nodes[0][79].down->value, 9377);
+TEST(Euler081, ReadLineNodes) {
+    vec_node_t nodes;
+    read_line_nodes(std::string("33 22 11"), nodes);
+    ASSERT_EQ(nodes.front().front().value, 33);
+    ASSERT_EQ(nodes.back().back().value, 11);
 }
 
-// TODO: Initial naive solution incorrect, will have to explore all paths to find lowest possible.
-TEST(Euler054, NumberWonHands) {
-    PathTrack tracker = sum_two_ways_path();
-    ASSERT_EQ(tracker.sum(), 548877);
-    cout << "The sum of the path taken is " << tracker.sum() << endl;
+TEST(Euler081, ReadAllNodes) {
+    vec_node_t nodes;
+    read_all_nodes(std::string(INPUT), nodes);
+    ASSERT_EQ(nodes.front().front().value, 4445);
+    ASSERT_EQ(nodes.back().back().value, 7981);
+}
 
-    cout << "Path taken through nodes:" << endl;
-    for (auto val: tracker.nodes) {
-        cout << val << " ";
-    }
-    cout << endl;
+TEST(Euler081, PrintMatrix) {
+    vec_node_t nodes;
+    read_all_nodes(std::string(INPUT_SMALL), nodes);
+    connect_nodes(nodes);
+    std::stringstream ss;
+    print_matrix(ss, nodes);
+    std::string expect_found = "0131 0673 0234 0103 0018";
+    ASSERT_TRUE(ss.str().find(expect_found) != std::string::npos);
+}
+
+TEST(Euler081, ConnectRows) {
+    vec_node_t nodes;
+    read_all_nodes(std::string(INPUT), nodes);
+    connect_nodes(nodes);
+
+    auto first = nodes.front().front();
+    ASSERT_EQ(first.right->value, 2697);
+    ASSERT_EQ(first.down->value, 1096);
+}
+
+TEST(Euler081, MinSumTwoWays) {
+    vec_node_t nodes;
+    read_all_nodes(std::string(INPUT), nodes);
+    connect_nodes(nodes);
+    const Node &root = nodes.front().front();
+    memo_t memo;
+    int min_sum = explore_path(root, memo);
+
+    ASSERT_EQ(min_sum, 427337);
+    cout << "The sum of the path taken is " << min_sum << endl;
 }
