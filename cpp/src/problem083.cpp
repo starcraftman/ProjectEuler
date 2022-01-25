@@ -12,6 +12,7 @@ in matrix.txt (right click and "Save Link/Target As..."), a 31K text file contai
 #include <sstream>
 #include <exception>
 #include <initializer_list>
+#include <deque>
 #include <map>
 #include <set>
 #include <algorithm>
@@ -38,7 +39,9 @@ public:
 
     // Data
     int value = 0;
+    int sum_value = 0;
     bool visited = false;
+    bool selected = false;
     Node *up = NULL;
     Node *right = NULL;
     Node *down = NULL;
@@ -162,17 +165,8 @@ void print_matrix(std::ostream &os, const vec_node_t &nodes, bool pointers = fal
     }
 }
 
-// TODO: Improvements
-//  - Better solution outline off top of head:
-//      - Mark starting node value in memo.
-//      - From this node, push down value to adjacent nodes.
-//      - Add adjacent nodes to dequeue to be visited.
-//      - For each node in dequeue repeat process above.
-//      - Once having visited every node in matrix once, should be at bottom right, print value.
-//  - Optional: I'd like to track nodes taken on solution.
+// N.B. This is a slow implementation modified quickly from previous, see explore_path2 for almost linear solution.
 void explore_path(Node &node, int sum_so_far, memo_t &memo) {
-    // N.B. This is a slow implementation modified quickly from previous, improvements can be made.
-
     // Always record the cost to get to current node.
     // If the cost to get to current is HIGHER than recorded, abort route.
     const int current_sum = sum_so_far + node.value;
@@ -199,6 +193,54 @@ void explore_path(Node &node, int sum_so_far, memo_t &memo) {
     }
     node.visited = false;
 }
+
+// Push BACK new values IF they are less than existing sum_value.
+// Keep recursing until there is no improvement in sum_value
+void recurse_push(Node *node, Node *origin) {
+    for (Node *next_node : {node->up, node->right, node->down, node->left}) {
+        if (next_node == NULL || next_node == origin) {
+            continue;
+        }
+        int new_sum = next_node->value + node->sum_value;
+        if (next_node->sum_value > new_sum) {
+            next_node->sum_value = new_sum;
+            recurse_push(next_node, node);
+        }
+    }
+}
+
+void explore_path2(Node &root) {
+    std::deque<Node *> todo;
+    root.selected = true;
+    root.sum_value = root.value;
+    todo.push_back(&root);
+    Node *node;
+
+    while (!todo.empty()) {
+        node = todo.front();
+        todo.pop_front();
+
+        for (Node *next_node : {node->up, node->right, node->down, node->left}) {
+            if (next_node == NULL) {
+                continue;
+            }
+
+            int sum_to_next = node->sum_value + next_node->value;
+            if (next_node->sum_value == 0) {
+                next_node->sum_value = sum_to_next;
+            } else if (next_node->sum_value > sum_to_next) {
+                next_node->sum_value = sum_to_next;
+                recurse_push(next_node, node);
+            }
+
+            if (!next_node->selected) {
+                next_node->selected = true;
+                todo.push_back(next_node);
+            }
+        }
+    }
+}
+
 
 TEST(Euler081, ReplaceAll) {
     std::string input("4445,2697,5115,718,2209,2212");
@@ -247,11 +289,25 @@ TEST(Euler081, MinSumFourWays) {
     read_all_nodes(std::string(INPUT), nodes);
     connect_nodes(nodes);
 
-    memo_t memo;
     Node &root = nodes.front().front();
-    explore_path(root, 0, memo);
+    explore_path2(root);
 
     Node &end = nodes.back().back();
-    cout << "Best path to node: " << end.value << " is " << memo[&end] << endl;
-    ASSERT_EQ(memo[&end], 425185);
+    cout << "Best path to node: " << end.value << " is " << end.sum_value << endl;
+    ASSERT_EQ(end.sum_value, 425185);
 }
+
+// Naieve implementation left
+// TEST(Euler081, MinSumFourWays) {
+    // vec_node_t nodes;
+    // read_all_nodes(std::string(INPUT), nodes);
+    // connect_nodes(nodes);
+
+    // memo_t memo;
+    // Node &root = nodes.front().front();
+    // explore_path(root, 0, memo);
+
+    // Node &end = nodes.back().back();
+    // cout << "Best path to node: " << end.value << " is " << memo[&end] << endl;
+    // ASSERT_EQ(memo[&end], 425185);
+// }
