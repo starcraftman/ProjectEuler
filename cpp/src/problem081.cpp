@@ -155,15 +155,13 @@ int explore_path(const Node &node, memo_t &memo) {
     }
 
     int min_got = 0;
-    if (node.right != NULL && node.down == NULL) {
-        min_got = explore_path(*node.right, memo);
-    } else if (node.right == NULL && node.down != NULL) {
-        min_got = explore_path(*node.down, memo);
-    } else {
-        min_got = std::min(
-            explore_path(*node.right, memo),
-            explore_path(*node.down, memo)
-        );
+    for (Node *next_node : {node.right, node.down}) {
+        if (next_node != NULL) {
+            int temp = explore_path(*next_node, memo);
+            if (min_got == 0 || temp < min_got) {
+                min_got = temp;
+            }
+        }
     }
 
     memo[&node] = node.value + min_got;

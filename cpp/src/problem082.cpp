@@ -38,7 +38,6 @@ public:
 
     // Data
     int value = 0;
-    bool visited = false;
     Node *up = NULL;
     Node *right = NULL;
     Node *down = NULL;
@@ -155,35 +154,31 @@ void print_matrix(std::ostream &os, const vec_node_t &nodes, bool pointers = fal
 }
 
 // TODO: Improvements
-//  - Maintain a "best sum seen" going down, abort running totals over best.
 //  - Optional: I'd like to track nodes taken on solution.
-//
-int explore_path(Node &node, memo_t &memo) {
-    cout << endl << node.value << " -- ";
-    if (memo[&node] != 0) {
-        return memo[&node];
-    }
-
-    if (node.right == NULL) {
-        return node.value;
-    }
-
-    node.visited = true;
-    // FIXME: Not working as intended, need to think more.
-    int min_got = 0; // Always a path right, so can't stay max
-    for (Node * next_node : {node.up, node.right, node.down}) {
-        if (next_node != NULL && next_node->visited == false) {
-            cout << "> " << next_node->value;
-            int temp = explore_path(*next_node, memo);
-            if (min_got == 0 || temp < min_got) {
-                min_got = temp;
-            }
+void explore_path(Node &node, int sum_so_far, memo_t &memo) {
+    // Always record the cost to get to current node.
+    // If the cost to get to current is HIGHER than recorded, abort route.
+    const int current_sum = sum_so_far + node.value;
+    if (!memo[&node]) {
+        memo[&node] = current_sum;
+    } else {
+        if (current_sum < memo[&node]) {
+            memo[&node] = current_sum;
+        } else {
+            return;
         }
     }
 
-    node.visited = false;
-    memo[&node] = node.value + min_got;
-    return memo[&node];
+    // Stop condition, reached right, we are at a solution.
+    if (node.right == NULL) {
+        return;
+    }
+
+    for (Node * next_node : {node.up, node.right, node.down}) {
+        if (next_node != NULL) {
+            explore_path(*next_node, current_sum, memo);
+        }
+    }
 }
 
 TEST(Euler081, ReplaceAll) {
@@ -223,31 +218,27 @@ TEST(Euler081, PrintMatrix) {
     connect_nodes(nodes);
     std::stringstream ss;
     print_matrix(ss, nodes, true);
-    cout << ss.str() << endl;
     std::string expect_found = "Node: 131(0, 673, 201) Node: 673(0, 234, 96) Node: 234(0, 103, 342) Node: 103(0, 18, 965) Node: 18(0, 0, 150)";
     ASSERT_TRUE(ss.str().find(expect_found) != std::string::npos);
 }
 
 TEST(Euler081, MinSumTwoWays) {
     vec_node_t nodes;
-    read_all_nodes(std::string(INPUT_SMALL), nodes);
+    read_all_nodes(std::string(INPUT), nodes);
     connect_nodes(nodes);
 
-    int min_sum = 0;
     memo_t memo;
-    Node &root = nodes[1].front();
-    int temp = explore_path(root, memo);
-    cout << "Starting from " << root.value << " best is " << temp << endl;
-    // for (std::vector<Node> &row : nodes) {
-        // memo_t memo;
-        // Node &root = row.front();
-        // int temp = explore_path(root, memo);
-        // cout << "Starting from " << root.value << " best is " << temp << endl;
-        // if (min_sum == 0 || temp < min_sum) {
-            // min_sum = temp;
-        // }
-    // }
+    for (std::vector<Node> &row : nodes) {
+        Node &root = row.front();
+        explore_path(root, 0, memo);
+    }
+    int best = 0;
+    for (std::vector<Node> &row : nodes) {
+        if (best == 0 || memo[&row.back()] < best) {
+            best = memo[&row.back()];
+        }
+    }
 
-    cout << "The sum of the path taken is " << min_sum << endl;
-    ASSERT_EQ(min_sum, 0);
+    cout << "The best sum path is " << best << endl;
+    ASSERT_EQ(best, 260324);
 }
