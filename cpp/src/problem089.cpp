@@ -48,21 +48,22 @@ using std::endl;
 
 /************** Global Vars & Functions *******************/
 static const std::string INPUT = "./src/input_e089.txt";
-static const std::map<std::string, int> char_to_val = {
-    {std::string("I"), 1},
-    {std::string("IV"), 4},
-    {std::string("V"), 5},
-    {std::string("IX"), 9},
-    {std::string("X"), 10},
-    {std::string("XL"), 40},
-    {std::string("L"), 50},
-    {std::string("XC"), 90},
-    {std::string("C"), 100},
-    {std::string("CD"), 400},
-    {std::string("D"), 500},
-    {std::string("CM"), 900},
+static const std::map<std::string, int> str_to_val = {
     {std::string("M"), 1000},
+    {std::string("CM"), 900},
+    {std::string("D"), 500},
+    {std::string("CD"), 400},
+    {std::string("C"), 100},
+    {std::string("XC"), 90},
+    {std::string("L"), 50},
+    {std::string("XL"), 40},
+    {std::string("X"), 10},
+    {std::string("IX"), 9},
+    {std::string("V"), 5},
+    {std::string("IV"), 4},
+    {std::string("I"), 1},
 };
+// Always check in descending order, prevents mis counting
 static const std::initializer_list<std::string> ordered_keys = {
     std::string("M"),
     std::string("CM"),
@@ -79,6 +80,18 @@ static const std::initializer_list<std::string> ordered_keys = {
     std::string("I"),
 };
 
+class FailedToParse : public std::exception {
+public:
+    explicit FailedToParse(const char* const numeral) : bad_numeral(numeral) {};
+    const char* what() const throw() {
+        return bad_numeral;
+    }
+
+    // Data.
+    const char* const bad_numeral;
+};
+
+
 class Numeral {
 public:
     Numeral(int value = 1) : value(value) {};
@@ -90,7 +103,7 @@ public:
         std::stringstream ss;
 
         for (auto &ele : ordered_keys) {
-            int val_chr = char_to_val.at(ele);
+            int val_chr = str_to_val.at(ele);
             while (copy_value > 0 && (copy_value - val_chr) >= 0) {
                 ss << ele;
                 copy_value -= val_chr;
@@ -101,13 +114,24 @@ public:
         return ss.str();
     }
 
-    // FIXME: Reverse the to_string process and compare substrings
     int parse_text(const std::string &text) {
+        std::string copy_text(text);
         this->value = 0;
 
-        for (const char chr : text) {
-            const std::string temp(1, chr);
-            this->value += char_to_val.at(temp);
+        while (copy_text != "") {
+            std::size_t start_len = copy_text.size();
+            for (auto &ele : ordered_keys) {
+                if (copy_text.substr(0, ele.size()) == ele) {
+                    copy_text = copy_text.substr(ele.size());
+                    this->value += str_to_val.at(ele);
+                }
+            }
+
+            // Unlikely due to good input but strictly with while possible.
+            if (start_len == copy_text.size()) {
+                this->value = 0;
+                throw FailedToParse(text.c_str());
+            }
         }
 
         return this->value;
@@ -123,7 +147,16 @@ public:
 };
 
 int saved_chars_roman_minimization(){
-    return 0;
+    std::ifstream input(INPUT, std::ifstream::in);
+    std::string line;
+    int diff = 0;
+    while (std::getline(input, line)) {
+        Numeral num;
+        num.parse_text(line);
+        diff += line.size() - num.to_string().size();
+    }
+
+    return diff;
 }
 
 TEST(Euler089, NumeralToString) {
@@ -137,6 +170,16 @@ TEST(Euler089, NumeralParseText) {
     ASSERT_EQ(num.value, 67);
 }
 
+TEST(Euler089, NumeralParseTextBadInput) {
+    Numeral num;
+    try {
+        num.parse_text(std::string("TTTT"));
+        ASSERT_TRUE(false);
+    } catch(FailedToParse &e) {
+        ASSERT_EQ(num.value, 0);
+    };
+}
+
 TEST(Euler089, NumeralOutputOperator) {
     Numeral num(57);
     std::stringstream ss;
@@ -145,14 +188,7 @@ TEST(Euler089, NumeralOutputOperator) {
 }
 
 TEST(Euler089, SavedCharsByMinimizing) {
-    std::ifstream input(INPUT, std::ifstream::in);
-    std::string line;
-    int diff = 0;
-    while (std::getline(input, line)) {
-        Numeral num;
-        num.parse_text(line);
-        diff += line.size() - num.to_string().size();
-    }
+    int diff = saved_chars_roman_minimization();
     cout << "Saved " << diff << " chars by minimizing the output." << endl;
-    // ASSERT_EQ(saved, 0);
+    ASSERT_EQ(diff, 743);
 }
