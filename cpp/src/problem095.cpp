@@ -40,7 +40,6 @@ using std::endl;
 /************** Global Vars & Functions *******************/
 typedef std::uint64_t num_t;
 const num_t MAX_SEEN = 50;
-std::map<num_t, std::pair<std::size_t, num_t> > cache;
 
 class NoChainFound : public std::exception {
 public:
@@ -181,7 +180,7 @@ TEST(Euler095, AmicableChains) {
 
     cout << "Best amicable cycle found under: " << max << endl;
     cout << "Length of " << best.cycle_len() << " had lowest value of: " << best.lowest << endl;
-    cout << "Elements of cycle (in no order):" << endl;
+    cout << "Elements of cycle in order:" << endl;
     for (auto ele : best.ordered) {
         cout << ele << ", ";
     }
