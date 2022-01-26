@@ -110,7 +110,6 @@ void connect_nodes(vec_node_t &nodes) {
     while (row != nodes.size()) {
         const std::size_t last_col_ind = nodes[row].size() - 1;
         std::size_t col = 0;
-        const std::size_t last_row = row - 1;
 
         while (col != nodes[row].size()) {
             if (col != last_col_ind) {
