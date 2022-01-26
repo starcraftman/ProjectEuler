@@ -97,9 +97,6 @@ public:
     Numeral(int value = 1) : value(value) {};
     std::string to_string() {
         int copy_value = value;
-        if (this->text != "") {
-            return this->text;
-        }
         std::stringstream ss;
 
         for (auto &ele : ordered_keys) {
@@ -110,7 +107,6 @@ public:
             }
         }
 
-        this->text = ss.str();
         return ss.str();
     }
 
@@ -142,7 +138,6 @@ public:
         return os;
     }
 
-    std::string text;
     int value;
 };
 
