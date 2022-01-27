@@ -30,6 +30,7 @@ By solving all fifty puzzles find the sum of the 3-digit numbers found in the to
 #include <map>
 #include <set>
 #include <algorithm>
+#include <iterator>
 #include <numeric>
 
 #include "gtest/gtest.h"
@@ -46,6 +47,14 @@ typedef std::uint64_t num_t;
 static const std::initializer_list<num_t> possible_vals = {1, 2, 3, 4, 5, 6, 7, 8, 9};
 // #define DETAIL_CELL true;
 
+// Debug info for CellCheck
+enum CheckType { Row, Column, Block };
+const static std::map<CheckType, std::string> checktype_to_str = {
+    {CheckType::Row, std::string("Row")},
+    {CheckType::Column, std::string("Column")},
+    {CheckType::Block, std::string("Block")},
+};
+
 class Cell {
 public:
     Cell(num_t row = 0, num_t col = 0, num_t value = 0) : row(row), col(col), value(value) {
@@ -54,30 +63,36 @@ public:
     void reset_possible() {
         possible.clear();
     }
+    void set_possible(std::vector<num_t> vals) {
+        possible.clear();
+        possible.insert(vals.begin(), vals.end());
+    }
     void remove_possible(num_t val) {
         possible.erase(val);
     }
     void add_possible(num_t val) {
         possible.insert(val);
     }
-    void set_num(num_t val) {
+    void set_value(num_t val) {
         value = val;
         possible.clear();
     }
+    void print_details(std::ostream &os) {
+        os << "Cell (" << this->row << ", " << this->col << ")"
+            << ": " << this->value;
+
+        if (this->possible.size() != 0) {
+            os << " Possible: ";
+            for (auto ele : this->possible) {
+                os << ele << ", ";
+            }
+        }
+
+        os << endl;
+    }
 
     friend std::ostream & operator<<(std::ostream &os, const Cell &cell) {
-#ifdef DETAIL_CELL
-    os << "Cell: " << cell.value << endl;
-    if (cell.possible.size() != 0) {
-        os << "Possible: ";
-        for (auto ele : cell.possible) {
-            os << ele << ", ";
-        }
-    }
-#else
-    os << cell.value << " ";
-#endif
-
+        os << cell.value;
         return os;
     }
 
@@ -87,6 +102,39 @@ public:
     num_t block = 0;
     num_t value = 0;
     std::set<num_t> possible;
+};
+
+// This class holds references to exactly 9 cells of a sudoku puzzle
+// Depending on how references are added, it can accomodate row, col and block checks.
+class CellsCheck {
+public:
+    CellsCheck(CheckType type = CheckType::Row, num_t num = 0) :
+        type(type), num(num) {
+        remains.insert(possible_vals.begin(), possible_vals.end());
+    }
+    void add(Cell &cell ) {
+        if (cell.value != 0) {
+            remains.erase(cell.value);
+        }
+        cells.push_back(std::ref(cell));
+    }
+    void eliminate(num_t value) {
+        remains.erase(value);
+    }
+
+    friend std::ostream & operator<<(std::ostream &os, const CellsCheck &check) {
+        os << "Check " << checktype_to_str.at(check.type) << " " << check.num << ": ";
+        for (auto ele : check.remains) {
+            os << ele << " ";
+        }
+        os << endl;
+        return os;
+    }
+
+    num_t num;
+    CheckType type;
+    std::set<num_t> remains;
+    std::vector<std::reference_wrapper<Cell> > cells;
 };
 
 // TODO: Sketch
@@ -112,6 +160,52 @@ public:
             this->cells.push_back(cell_row);
         }
     }
+    void init_checkers() {
+        for (int i = 0; i < 9; ++i) {
+            row_checks.push_back(CellsCheck(CheckType::Row, i));
+            col_checks.push_back(CellsCheck(CheckType::Column, i));
+            block_checks.push_back(CellsCheck(CheckType::Block, i));
+        }
+
+        for (auto &row : cells) {
+            for (auto &cell : row) {
+                row_checks[cell.row].add(cell);
+                col_checks[cell.col].add(cell);
+                block_checks[cell.block].add(cell);
+            }
+        }
+    }
+
+    void check_possible() {
+        for (auto &row : cells) {
+            for (auto &cell : row) {
+                std::vector<num_t> inter;
+                std::vector<num_t> result;
+                auto &row_check = row_checks.at(cell.row);
+                auto &col_check = col_checks.at(cell.col);;
+                auto &block_check = block_checks.at(cell.block);
+                std::set_intersection(row_check.remains.begin(), row_check.remains.end(),
+                                      col_check.remains.begin(), col_check.remains.end(),
+                                      std::back_inserter(inter));
+                std::set_intersection(inter.begin(), inter.end(),
+                                      block_check.remains.begin(), block_check.remains.end(),
+                                      std::back_inserter(result));
+                if (cell.value == 0) {
+                    if (result.size() == 1) {
+                        num_t value = result.back();
+                        cell.set_value(value);
+                        row_check.eliminate(value);
+                        col_check.eliminate(value);
+                        block_check.eliminate(value);
+                    } else {
+                        cell.set_possible(result);
+                    }
+                }
+                // cell.print_details(cout);
+            }
+        }
+    }
+
     void solve() {}
     num_t top_cells() {
         num_t cnt = 3;
@@ -129,7 +223,7 @@ public:
     friend std::ostream & operator<<(std::ostream &os, const Sudoku &puzzle) {
         for (auto cell_row : puzzle.cells) {
             for (auto cell : cell_row) {
-                os << cell << " ";
+                    os << cell << " ";
             }
             os << endl;
         }
@@ -153,19 +247,100 @@ public:
     }
 
     // Data
+    std::vector<CellsCheck> row_checks;
+    std::vector<CellsCheck> col_checks;
+    std::vector<CellsCheck> block_checks;
     std::vector<std::vector<Cell> > cells;
 };
 
+TEST(Euler096_Cell, Constructor) {
+    Cell cell(7, 0, 5);
+    ASSERT_EQ(cell.row, 7);
+    ASSERT_EQ(cell.col, 0);
+    ASSERT_EQ(cell.block, 6);
+    ASSERT_EQ(cell.value, 5);
+}
+
+TEST(Euler096_Cell, AddPossible) {
+    Cell cell(7, 0, 0);
+    cell.add_possible(7);
+    cell.add_possible(2);
+    cell.add_possible(3);
+    std::set<num_t> expect = {2, 3, 7};
+    ASSERT_EQ(cell.possible, expect);
+}
+
+TEST(Euler096_Cell, RemovePossible) {
+    Cell cell(7, 0, 0);
+    cell.add_possible(7);
+    cell.add_possible(3);
+    cell.remove_possible(7);
+    std::set<num_t> expect = {3};
+    ASSERT_EQ(cell.possible, expect);
+}
+
+TEST(Euler096_Cell, SetValue) {
+    Cell cell(7, 0, 0);
+    cell.add_possible(7);
+    cell.add_possible(2);
+    cell.add_possible(3);
+    cell.set_value(7);
+    std::set<num_t> expect;
+    ASSERT_EQ(cell.possible, expect);
+}
+
+TEST(Euler096_Cell, OutputOperator) {
+    Cell cell(7, 0, 9);
+    std::stringstream ss;
+    ss << cell;
+    ASSERT_EQ(ss.str(), std::string("9"));
+}
 TEST(Euler096, SudokuInputOperator) {
     std::ifstream input(INPUT_SMALL, std::ifstream::in);
     Sudoku puzzle;
     input >> puzzle;
     std::stringstream ss;
     ss << puzzle;
-    std::string expect = "0  0  3  0  2  0  6  0  0";
+    std::string expect = "0 0 3 0 2 0 6 0 0";
 
     ASSERT_TRUE(ss.str().find(expect) != std::string::npos);
 }
+
+TEST(Euler096, InitCheckers) {
+    std::ifstream input(INPUT_SMALL, std::ifstream::in);
+    Sudoku puzzle;
+    input >> puzzle;
+    puzzle.init_checkers();
+
+    std::set<num_t> expect = {1, 4, 5, 7, 8, 9};
+    ASSERT_EQ(puzzle.row_checks.at(0).remains, expect);
+}
+
+TEST(Euler096, CheckPossible) {
+    std::ifstream input(INPUT_SMALL, std::ifstream::in);
+    Sudoku puzzle;
+    input >> puzzle;
+
+    // Proof of working checkers, solved puzzle.
+    cout << puzzle;
+    puzzle.init_checkers();
+    for (int i = 0; i < 9; ++i) {
+        puzzle.check_possible();
+    }
+    cout << puzzle;
+}
+
+// TEST(Euler096, SetWorks) {
+    // std::set<int> a = {0, 1, 4, 5};
+    // std::set<int> b = {1, 2, 3, 6, 8};
+    // std::vector<int> c;
+    // std::set_intersection(a.begin(), a.end(),
+                          // b.begin(), b.end(),
+                          // std::back_inserter(c));
+    // for (auto ele : c) {
+        // cout << ele << " ";
+    // }
+// }
 
 // TEST(Euler096, FinalSolution) {
     // std::ifstream input(INPUT, std::ifstream::in);
