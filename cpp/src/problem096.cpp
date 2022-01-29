@@ -81,9 +81,16 @@ public:
         possible.insert(val);
     }
     void set_value(num_t val) {
+        last_value = value;
         value = val;
         possible.clear();
     }
+    void restore(const Cell &cell) {
+        value = last_value;
+        possible.clear();
+        possible.insert(cell.possible.begin(), cell.possible.end());
+    }
+
     void print_details(std::ostream &os) {
         os << "Cell (" << this->row << ", " << this->col << ")"
             << ": " << this->value;
@@ -112,8 +119,11 @@ public:
         if (this->possible.size() != other.possible.size()) {
             return this->possible.size() < other.possible.size();
         }
-
-        return this->row < other.row && this->col < other.col;
+        if (this->row == other.row) {
+            return this->col < other.col;
+        } else {
+            return this->row < other.row;
+        }
     }
     bool operator<=(const Cell &other) const { return (*this == other) || *this < other; }
     bool operator>(const Cell &other) const { return !(*this <= other); }
@@ -124,7 +134,31 @@ public:
     num_t col = 0;
     num_t block = 0;
     num_t value = 0;
+    num_t last_value = 0;
     std::set<num_t> possible;
+};
+
+// Simple change set records changes to the puzzle.
+// By storing the new value and old possible values we can revert the move by setting old cell to 0 and retoring possible.
+class ChangeSet {
+public:
+    explicit ChangeSet(const Cell &cell, num_t new_val) : cell(cell) {
+        this->cell.value = new_val;
+    }
+    ChangeSet(num_t row = 0, num_t col = 0, num_t value = 0) : cell(Cell(row, col, value)) {};
+
+    friend std::ostream & operator<<(std::ostream &os, const ChangeSet &change) {
+        os << "Change (" << change.cell.row << "," << change.cell.col << ") => " << change.cell.value << endl;
+        return os;
+    }
+    bool operator==(const ChangeSet &other) const {
+        return this->cell.row == other.cell.row &&
+            this->cell.col == other.cell.col &&
+            this->cell.value == other.cell.value;
+    }
+    bool operator!=(const ChangeSet &other) const { return !(*this == other); }
+
+    Cell cell;
 };
 
 // This class holds references to exactly 9 cells of a sudoku puzzle
@@ -141,6 +175,25 @@ public:
             remains.erase(cell.value);
         }
         cells.push_back(std::ref(cell));
+    }
+    void mark_off_possible() {
+        std::set<num_t> found;
+        for (Cell &cell : cells) {
+            found.insert(cell.value);
+        }
+        found.erase(0);
+        for (auto val : found) {
+            remains.erase(val);
+        }
+
+        for (Cell &cell : cells) {
+            if (cell.value == 0) {
+                cell.remove_all_possible(found);
+            }
+        }
+    }
+    void restore(num_t value) {
+        remains.insert(value);
     }
     void eliminate(num_t value) {
         remains.erase(value);
@@ -194,13 +247,7 @@ std::vector<num_t> cells_check_union(const CellsCheck &row_check, const CellsChe
     return result;
 }
 
-// TODO: List of ideas.
-// 2) Be able to sort cells in a big list by possible values left so can always look at next cell with least possibles.
-// 4) When no deductions possible, need a fallback to select the cell with LEAST possible values and
-//    "try and check" possibles temporarily if it can solve it.
-// 5) Some log of changes to a puzzle, can be outputted and played forward and back.
-
-// Only for classic 9x9 grid.
+// Based on the classic 9x9 grid.
 // Any positioning starts in top left corner.
 // So block 0 is top left, row 0 is first and so on.
 class Sudoku {
@@ -216,6 +263,7 @@ public:
             this->cells.push_back(cell_row);
         }
     }
+    // Should be called after reading in values
     void init_checkers() {
         for (int i = 0; i < 9; ++i) {
             row_checks.push_back(CellsCheck(CheckType::Row, i));
@@ -224,79 +272,123 @@ public:
         }
 
         for (auto &row : cells) {
-            for (auto &cell : row) {
+            for (Cell &cell : row) {
                 row_checks[cell.row].add(cell);
                 col_checks[cell.col].add(cell);
                 block_checks[cell.block].add(cell);
+                if (cell.value == 0) {
+                    cells_left.push_back(cell);
+                }
             }
         }
     }
 
     // A single pass over all row, column and block checks to mark off possible solutions.
-    bool check_cells() {
-        bool changed = false;
-        for (auto &checks : {row_checks, col_checks, block_checks}) {
-            for (auto &check : checks) {
-                std::set<num_t> found;
-                for (Cell &cell : check.cells) {
-                    found.insert(cell.value);
-                }
-                found.erase(0);
-
-                for (Cell &cell : check.cells) {
-                    if (cell.value == 0) {
-                        cell.remove_all_possible(found);
-                    }
-                    if (cell.possible.size() == 1) {
-                        changed = true;
-                        cell.set_value(*cell.possible.begin());
-                    }
-                }
+    void check_possible() {
+        std::vector<std::vector<CellsCheck> > all_checks = {row_checks, col_checks, block_checks};
+        for (std::vector<CellsCheck> &checks : all_checks) {
+            for (CellsCheck &check : checks) {
+                check.mark_off_possible();
             }
         }
-
-        return changed;
     }
+
+    // Iterate over cells left and itemize changes required
+    void check_cells_for_values(std::vector<ChangeSet> &changes) {
+        // for (Cell &cell : cells_left) {
+        for (auto itr = cells_left.begin(); itr != cells_left.end(); ++itr) {
+            Cell &cell = *itr;
+            if (cell.possible.size() == 1) {
+                ChangeSet change(cell, *cell.possible.begin());
+                changes.push_back(change);
+                itr = cells_left.erase(itr) - 1;
+            }
+        }
+    }
+
+    void apply_changes(const std::vector<ChangeSet> &changes) {
+        for (const auto &change : changes) {
+            history.push_back(change);
+            num_t val = change.cell.value;
+            const Cell &cell = change.cell;
+
+            cells[cell.row][cell.col].set_value(val);
+            row_checks[cell.row].eliminate(val);
+            col_checks[cell.col].eliminate(val);
+            block_checks[cell.block].eliminate(val);
+        }
+    }
+
+    void reverse_changes(const std::vector<ChangeSet> &changes) {
+        for (const auto &change : changes) {
+            history.pop_back();
+            num_t val = change.cell.value;
+            const Cell &cell = change.cell;
+
+            cells[cell.row][cell.col].restore(cell);
+            row_checks[cell.row].restore(val);
+            col_checks[cell.col].restore(val);
+            block_checks[cell.block].restore(val);
+        }
+    }
+
+    // Sort the cells remaining that aren't definite.
+    void sort_cells_left() {
+        std::sort(cells_left.begin(), cells_left.end(),
+                [](std::reference_wrapper<Cell> &left, std::reference_wrapper<Cell> &right) {
+                return left.get() < right.get(); }
+        );
+    }
+
     // Take a low possibilities cell and try them temporarily and check.
-    void try_and_check() {
-        // TODO: Write
-    }
+// FIXME: This part needs more work
+    bool try_and_check() {
+        sort_cells_left();
 
-    // FIXME: Rewrite or gut. Was going for a slightly more efficient stategy than scanning all, involving triggering only scans for
-    //        Checkeers where values changed under the cells.
-    bool check_possible() {
-        bool deduction_made = false;
-        for (auto &row : cells) {
-            for (auto &cell : row) {
-                if (cell.value != 0) {
-                    continue;
+        cout << "Try sorted : " << endl;
+        for (Cell &cell : cells_left) {
+            for (auto val : cell.possible) {
+                std::vector<ChangeSet> changes;
+                changes.push_back(ChangeSet(cell, val));
+                cout << "Calling solve for: " << val <<  endl;
+                apply_changes(changes);
+
+                if (!solve(true)) {
+                    reverse_changes(changes);
                 }
-
-                auto &row_check = row_checks.at(cell.row);
-                auto &col_check = col_checks.at(cell.col);;
-                auto &block_check = block_checks.at(cell.block);
-                // std::vector<num_t> result = cells_check_union(row_check, col_check, block_check);
-
-                // cout << "Found ";
-                // for (auto val : result) {
-                   // cout << val << " ";
-                // }
-                // cout << endl;
-
-                // if (result.size() == 1) {
-                    // deduction_made = true;
-                    // num_t value = result.back();
-                    // cell.set_value(value);
-                    // row_check.eliminate(value);
-                    // col_check.eliminate(value);
-                    // block_check.eliminate(value);
-                // } else {
-                    // cell.set_possible(result);
-                // }
             }
         }
 
-        return deduction_made;
+    }
+
+    // Returns true if was able to solve without issue.
+    // TODO: When trial is true, don't affect changes like removing from cells_left
+    bool solve(bool trial = false) {
+        num_t cnt = 0;
+        while (!is_solved()) {
+            cout << "Round : " << ++cnt << endl;
+            std::vector<ChangeSet> changes;
+            // Mark down possible cells.
+            check_possible();
+
+            // Visit cells left and determine possible changes, returned in vector
+            check_cells_for_values(changes);
+
+            // If deduced changes possible, make them
+            if (changes.size() != 0) {
+                for (auto change : changes) {
+                    cout << change;
+                }
+
+                // Affect the changes
+                apply_changes(changes);
+            } else {
+                // Deductions have failed, pick a possible value of node and check solution.
+                return try_and_check();
+            }
+        }
+
+        return is_solved();
     }
 
     // Check if puzzle solved. Implies puzzle is valid.
@@ -332,18 +424,7 @@ public:
         return true;
     }
 
-    // Return true if we were able to solve.
-    bool solve() {
-        while (!is_solved()) {
-            // Look for a change by deduction.
-            if (!check_cells()) {
-                try_and_check();
-            }
-        }
-
-        return true;
-    }
-
+    // Just there to answer Euler problem
     num_t top_cells() {
         num_t cnt = 3;
         num_t num = 0;
@@ -415,6 +496,7 @@ public:
     bool operator!=(const Sudoku &other) const { return !(*this == other); }
 
     // Data
+    std::vector<ChangeSet> history;
     std::vector<CellsCheck> row_checks;
     std::vector<CellsCheck> col_checks;
     std::vector<CellsCheck> block_checks;
@@ -481,6 +563,18 @@ TEST(Euler096_CellsCheck, Add) {
     ASSERT_EQ(check.remains.size(), 6);
 }
 
+TEST(Euler096_CellsCheck, MarkOffPossible) {
+    std::ifstream input(INPUT_SMALL, std::ifstream::in);
+    Sudoku puzzle;
+    input >> puzzle;
+    puzzle.init_checkers();
+
+    auto check = puzzle.row_checks[0];
+    ASSERT_EQ(puzzle.cells[0][0].possible.size(), 9);
+    check.mark_off_possible();
+    ASSERT_EQ(puzzle.cells[0][0].possible.size(), 6);
+}
+
 TEST(Euler096_CellsCheck, OutputOperator) {
     CellsCheck check;
     Cell cell(0, 0, 9);
@@ -538,9 +632,29 @@ TEST(Euler096_Sudoku, CheckPossible) {
 
     ASSERT_EQ(puzzle.cells[4][5].value, 0);
     ASSERT_EQ(puzzle.cells[4][6].value, 0);
-    puzzle.check_cells();
-    ASSERT_EQ(puzzle.cells[4][5].value, 4);
-    ASSERT_EQ(puzzle.cells[4][6].value, 1);
+    ASSERT_EQ(puzzle.cells[4][5].possible.size(), 9);
+    ASSERT_EQ(puzzle.cells[4][6].possible.size(), 9);
+    puzzle.check_possible();
+    ASSERT_EQ(puzzle.cells[4][5].possible.size(), 1);
+    ASSERT_EQ(puzzle.cells[4][6].possible.size(), 1);
+    ASSERT_EQ(*puzzle.cells[4][5].possible.begin(), 4);
+    ASSERT_EQ(*puzzle.cells[4][6].possible.begin(), 1);
+}
+
+TEST(Euler096_Sudoku, CheckCellsForValues) {
+    std::ifstream input(INPUT_SMALL, std::ifstream::in);
+    Sudoku puzzle;
+    input >> puzzle;
+    puzzle.init_checkers();
+    puzzle.check_possible();
+    std::vector<ChangeSet> changes;
+    puzzle.check_cells_for_values(changes);
+
+    ASSERT_EQ(changes.size(), 3);
+    auto front = changes.front();
+    ASSERT_EQ(front.cell.row, 4);
+    ASSERT_EQ(front.cell.col, 5);
+    ASSERT_EQ(front.cell.value, 4);
 }
 
 TEST(Euler096_Sudoku, IsSolvedTrue) {
@@ -594,14 +708,68 @@ TEST(Euler096_Sudoku, IsValidFalseBlock) {
     ASSERT_FALSE(puzzle.is_valid());
 }
 
-// // // TODO: Better test method.
+TEST(Euler096_Sudoku, TopCells) {
+    std::ifstream input(INPUT_SMALL_SOLVED);
+    Sudoku puzzle;
+    input >> puzzle;
+    ASSERT_EQ(puzzle.top_cells(), 483);
+}
+
+TEST(Euler096_Sudoku, ApplyChanges) {
+    std::ifstream input(INPUT_SMALL);
+    Sudoku puzzle;
+    input >> puzzle;
+    puzzle.init_checkers();
+    std::vector<ChangeSet> changes;
+    changes.push_back(ChangeSet(0, 0, 5));
+    changes.push_back(ChangeSet(1, 1, 9));
+    puzzle.apply_changes(changes);
+
+    ASSERT_EQ(puzzle.cells[0][0].value, 5);
+    ASSERT_EQ(puzzle.cells[1][1].value, 9);
+}
+
+TEST(Euler096_Sudoku, ReverseChanges) {
+    std::ifstream input(INPUT_SMALL);
+    Sudoku puzzle;
+    input >> puzzle;
+    puzzle.init_checkers();
+    std::vector<ChangeSet> changes;
+    changes.push_back(ChangeSet(0, 0, 5));
+    changes.push_back(ChangeSet(1, 1, 9));
+    puzzle.apply_changes(changes);
+    puzzle.reverse_changes(changes);
+
+    ASSERT_EQ(puzzle.cells[0][0].value, 0);
+    ASSERT_EQ(puzzle.cells[1][1].value, 0);
+}
+
+TEST(Euler096_Sudoku, SortCellsLeft) {
+    std::ifstream input(INPUT_SMALL);
+    Sudoku puzzle;
+    input >> puzzle;
+    puzzle.init_checkers();
+    puzzle.check_possible();
+
+    Cell &cell = puzzle.cells_left[0];
+    ASSERT_EQ(cell.row, 0);
+    ASSERT_EQ(cell.col, 0);
+
+    puzzle.sort_cells_left();
+
+    Cell &cell2 = puzzle.cells_left[0];
+    ASSERT_EQ(cell2.row, 4);
+    ASSERT_EQ(cell2.col, 5);
+}
+
+// TODO: Better test method.
 // TEST(Euler096_Sudoku, Solve) {
     // std::ifstream input(INPUT_SMALL, std::ifstream::in);
     // Sudoku puzzle;
     // input >> puzzle;
+    // puzzle.init_checkers();
 
     // cout << puzzle;
-    // puzzle.init_checkers();
     // puzzle.solve();
     // cout << line_break << endl << puzzle;
     // ASSERT_TRUE(puzzle.is_solved());
@@ -648,3 +816,42 @@ TEST(Euler096_Sudoku, IsValidFalseBlock) {
         // cout << "The sum of the top left cells of solved sudoku puzzles is: " << corner_sum << endl;
     // }
 // }
+
+    // Goes in Sudoku class
+    // FIXME: Rewrite or gut. Was going for a slightly more efficient stategy than scanning all, involving triggering only scans for
+    //        Checkeers where values changed under the cells.
+    // bool check_possible() {
+        // bool deduction_made = false;
+        // for (auto &row : cells) {
+            // for (auto &cell : row) {
+                // if (cell.value != 0) {
+                    // continue;
+                // }
+
+                // auto &row_check = row_checks.at(cell.row);
+                // auto &col_check = col_checks.at(cell.col);;
+                // auto &block_check = block_checks.at(cell.block);
+                // // std::vector<num_t> result = cells_check_union(row_check, col_check, block_check);
+
+                // // cout << "Found ";
+                // // for (auto val : result) {
+                   // // cout << val << " ";
+                // // }
+                // // cout << endl;
+
+                // // if (result.size() == 1) {
+                    // // deduction_made = true;
+                    // // num_t value = result.back();
+                    // // cell.set_value(value);
+                    // // row_check.eliminate(value);
+                    // // col_check.eliminate(value);
+                    // // block_check.eliminate(value);
+                // // } else {
+                    // // cell.set_possible(result);
+                // // }
+            // }
+        // }
+
+        // return deduction_made;
+    // }
+
