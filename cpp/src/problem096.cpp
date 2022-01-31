@@ -31,6 +31,7 @@ By solving all fifty puzzles find the sum of the 3-digit numbers found in the to
 #include <set>
 #include <algorithm>
 #include <iterator>
+#include <cstdlib>
 #include <numeric>
 
 #include "gtest/gtest.h"
@@ -86,11 +87,11 @@ public:
         possible.clear();
     }
     void restore(const Cell &cell) {
-        value = last_value;
+        value = cell.last_value;
+        last_value = 0;
         possible.clear();
         possible.insert(cell.possible.begin(), cell.possible.end());
     }
-
     void print_details(std::ostream &os) {
         os << "Cell (" << this->row << ", " << this->col << ")"
             << ": " << this->value;
@@ -143,6 +144,7 @@ public:
 class ChangeSet {
 public:
     explicit ChangeSet(const Cell &cell, num_t new_val) : cell(cell) {
+        this->cell.last_value = this->cell.value;
         this->cell.value = new_val;
     }
     ChangeSet(num_t row = 0, num_t col = 0, num_t value = 0) : cell(Cell(row, col, value)) {};
@@ -256,8 +258,7 @@ public:
         for (int row = 0; row < 9; ++row) {
             std::vector<Cell> cell_row;
             for (int col  = 0; col  < 9; ++col ) {
-                Cell cell(row, col);
-                cell_row.push_back(cell);
+                cell_row.push_back(Cell(row, col));
             }
 
             this->cells.push_back(cell_row);
@@ -309,26 +310,24 @@ public:
     void apply_changes(const std::vector<ChangeSet> &changes) {
         for (const auto &change : changes) {
             history.push_back(change);
-            num_t val = change.cell.value;
             const Cell &cell = change.cell;
 
-            cells[cell.row][cell.col].set_value(val);
-            row_checks[cell.row].eliminate(val);
-            col_checks[cell.col].eliminate(val);
-            block_checks[cell.block].eliminate(val);
+            cells[cell.row][cell.col].set_value(cell.value);
+            row_checks[cell.row].eliminate(cell.value);
+            col_checks[cell.col].eliminate(cell.value);
+            block_checks[cell.block].eliminate(cell.value);
         }
     }
 
     void reverse_changes(const std::vector<ChangeSet> &changes) {
-        for (const auto &change : changes) {
+        for (auto itr = changes.rbegin(); itr != changes.rend(); ++itr) {
             history.pop_back();
-            num_t val = change.cell.value;
-            const Cell &cell = change.cell;
+            const Cell &cell = itr->cell;
 
             cells[cell.row][cell.col].restore(cell);
-            row_checks[cell.row].restore(val);
-            col_checks[cell.col].restore(val);
-            block_checks[cell.block].restore(val);
+            row_checks[cell.row].restore(cell.value);
+            col_checks[cell.col].restore(cell.value);
+            block_checks[cell.block].restore(cell.value);
         }
     }
 
@@ -347,7 +346,9 @@ public:
 
         cout << "Try sorted : " << endl;
         for (Cell &cell : cells_left) {
+            cout << "Cell (" << cell.row << ", " << cell.col << ")" << endl;
             for (auto val : cell.possible) {
+                cell.print_details(cout);
                 std::vector<ChangeSet> changes;
                 changes.push_back(ChangeSet(cell, val));
                 cout << "Calling solve for: " << val <<  endl;
@@ -355,16 +356,20 @@ public:
 
                 if (!solve(true)) {
                     reverse_changes(changes);
+                } else {
+                    return true;
                 }
             }
         }
 
+        return false;
     }
 
     // Returns true if was able to solve without issue.
     // TODO: When trial is true, don't affect changes like removing from cells_left
-    bool solve(bool trial = false) {
-        num_t cnt = 0;
+    bool solve(bool trial = false, num_t cnt = 0) {
+        cout << "Called solve with history size: " << history.size() << endl;
+        std::vector<ChangeSet> changes_so_far;
         while (!is_solved()) {
             cout << "Round : " << ++cnt << endl;
             std::vector<ChangeSet> changes;
@@ -377,34 +382,40 @@ public:
             // If deduced changes possible, make them
             if (changes.size() != 0) {
                 for (auto change : changes) {
+                    changes_so_far.push_back(change);
                     cout << change;
                 }
 
                 // Affect the changes
                 apply_changes(changes);
+
             } else {
+                cout << "Trial time " << endl;
+                cout << *this << endl;
+
                 // Deductions have failed, pick a possible value of node and check solution.
                 return try_and_check();
             }
         }
 
+        if (trial) {
+            reverse_changes(changes_so_far);
+        }
+
         return is_solved();
     }
 
-    // Check if puzzle solved. Implies puzzle is valid.
-    bool is_solved() {
-        for (auto &row : cells) {
-            if (std::any_of(row.begin(), row.end(),
-                [](Cell &cell) { return cell.value == 0; })) {
-                return false;
-            }
-        }
-
-        return true && is_valid();
+    /*
+     * Just a short hand now.
+     */
+    inline bool is_solved() {
+        return is_valid(true);
     }
 
-    // Check only if puzzle is currently valid.
-    bool is_valid() {
+    /*
+     * Check if a puzzle is valid or alternatively if it is solved.
+     */
+    bool is_valid(bool also_solved = false) {
         for (auto &checks : {row_checks, col_checks, block_checks}) {
             for (auto &check : checks) {
                 num_t cnt = 0;
@@ -415,8 +426,16 @@ public:
                         ++cnt;
                     }
                 }
+                // Check for dupes
                 if (cnt != found.size()) {
                     return false;
+                }
+
+                // Solution has to be solved for every checker.
+                if (also_solved) {
+                    if (cnt != all_values.size()) {
+                        return false;
+                    }
                 }
             }
         }
@@ -763,17 +782,17 @@ TEST(Euler096_Sudoku, SortCellsLeft) {
 }
 
 // TODO: Better test method.
-// TEST(Euler096_Sudoku, Solve) {
-    // std::ifstream input(INPUT_SMALL, std::ifstream::in);
-    // Sudoku puzzle;
-    // input >> puzzle;
-    // puzzle.init_checkers();
+TEST(Euler096_Sudoku, Solve) {
+    std::ifstream input(INPUT_SMALL, std::ifstream::in);
+    Sudoku puzzle;
+    input >> puzzle;
+    puzzle.init_checkers();
 
-    // cout << puzzle;
-    // puzzle.solve();
-    // cout << line_break << endl << puzzle;
-    // ASSERT_TRUE(puzzle.is_solved());
-// }
+    cout << puzzle;
+    puzzle.solve();
+    cout << line_break << endl << puzzle;
+    ASSERT_TRUE(puzzle.is_solved());
+}
 
 // TEST(Euler096, FinalSolution) {
     // std::ifstream input(INPUT, std::ifstream::in);
@@ -798,7 +817,7 @@ TEST(Euler096_Sudoku, SortCellsLeft) {
         // }
         // cout << line_break << endl << puzzle << endl;
 
-        // // See second puzzle.
+        // See second puzzle.
         // if (++cnt == 2) {
             // puzzle.print_details();
             // break;
