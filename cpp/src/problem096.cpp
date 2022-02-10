@@ -29,6 +29,7 @@ By solving all fifty puzzles find the sum of the 3-digit numbers found in the to
 #include <initializer_list>
 #include <map>
 #include <set>
+#include <deque>
 #include <algorithm>
 #include <iterator>
 #include <cstdlib>
@@ -45,6 +46,10 @@ using std::endl;
 static const std::string INPUT = "./src/input_e096.txt";
 static const std::string INPUT_SMALL = "./src/input_e096.small.txt";
 static const std::string INPUT_SMALL_SOLVED = "./src/input_e096.small_solved.txt";
+static const std::string INPUT_SMALL2 = "./src/input_e096.small2.txt";
+static const std::string INPUT_SMALL2_SOLVED = "./src/input_e096.small2_solved.txt";
+static const std::string INPUT_SMALL3 = "./src/input_e096.small3.txt";
+static const std::string INPUT_SMALL3_SOLVED = "./src/input_e096.small3_solved.txt";
 const static std::string line_break = "==========================================";
 
 typedef std::uint64_t num_t;
@@ -69,6 +74,10 @@ public:
     void set_possible(std::vector<num_t> &vals) {
         possible.clear();
         possible.insert(vals.begin(), vals.end());
+    }
+    void set_possible(num_t val) {
+        possible.clear();
+        possible.insert(val);
     }
     void remove_possible(num_t val) {
         possible.erase(val);
@@ -138,6 +147,7 @@ public:
     num_t last_value = 0;
     std::set<num_t> possible;
 };
+typedef std::vector<std::reference_wrapper<Cell>> cells_vec_t;
 
 // Simple change set records changes to the puzzle.
 // By storing the new value and old possible values we can revert the move by setting old cell to 0 and retoring possible.
@@ -178,6 +188,14 @@ public:
         }
         cells.push_back(std::ref(cell));
     }
+    /*
+     * Marks off the possible against what remains. Following is done:
+     * - Search existing values in a checker and put in a set.
+     * - Update the remains in the checker based on set found.
+     * - For every cell, remove all set values from possible.
+     * - Check the possible values left against cells,
+     *   if any possible is only in one cell, elminate other psosibles for that cell.
+     */
     void mark_off_possible() {
         std::set<num_t> found;
         for (Cell &cell : cells) {
@@ -188,9 +206,25 @@ public:
             remains.erase(val);
         }
 
+        std::map<num_t, cells_vec_t> cells_possible;
+        for (int i = 0; i != 10; ++i) {
+            cells_possible[i] = cells_vec_t();
+        }
         for (Cell &cell : cells) {
             if (cell.value == 0) {
                 cell.remove_all_possible(found);
+                // Iterate remaining and build map of possible value -> cells vector.
+                for (auto val : cell.possible) {
+                    cells_possible[val].push_back(std::ref(cell));
+                }
+            }
+        }
+
+        // If only one cell in a row can be a value, eliminate all other possibles.
+        for (auto possible_pair : cells_possible) {
+            if (possible_pair.second.size() == 1) {
+                Cell &only = possible_pair.second.back();
+                only.set_possible(possible_pair.first);
             }
         }
     }
@@ -230,7 +264,7 @@ public:
     CheckType type;
     num_t num;
     std::set<num_t> remains;
-    std::vector<std::reference_wrapper<Cell> > cells;
+    cells_vec_t cells;
 };
 
 // Equal to: (A U B U C)
@@ -294,9 +328,8 @@ public:
         }
     }
 
-    // Iterate over cells left and itemize changes required
+    // Find all cells with only one possibility and add the change.
     void check_cells_for_values(std::vector<ChangeSet> &changes) {
-        // for (Cell &cell : cells_left) {
         for (auto itr = cells_left.begin(); itr != cells_left.end(); ++itr) {
             Cell &cell = *itr;
             if (cell.possible.size() == 1) {
@@ -341,24 +374,38 @@ public:
 
     // Take a low possibilities cell and try them temporarily and check.
 // FIXME: This part needs more work
-    bool try_and_check() {
+    bool try_and_check(num_t frame) {
         sort_cells_left();
 
-        cout << "Try sorted : " << endl;
+        cout << "Called Try and Check : " << endl;
         for (Cell &cell : cells_left) {
-            cout << "Cell (" << cell.row << ", " << cell.col << ")" << endl;
-            for (auto val : cell.possible) {
-                cell.print_details(cout);
-                std::vector<ChangeSet> changes;
-                changes.push_back(ChangeSet(cell, val));
-                cout << "Calling solve for: " << val <<  endl;
-                apply_changes(changes);
+            cell.print_details(cout);
+        }
 
-                if (!solve(true)) {
-                    reverse_changes(changes);
-                } else {
-                    return true;
+        // Itemize all possible changes and try one at a time.
+        std::deque<ChangeSet> all_possible;
+        for (Cell &cell : cells_left) {
+            if (cell.possible.size() > 1) {
+                for (auto val : cell.possible) {
+                    all_possible.push_back(ChangeSet(cell, val));
                 }
+            }
+        }
+
+        while (all_possible.size() != 0) {
+            std::vector<ChangeSet> changes;
+            changes.push_back(all_possible.front());
+            all_possible.pop_front();
+
+            cout << "Attempting: " << changes.back() << endl;
+
+            apply_changes(changes);
+            if (solve(true, frame + 1)) {
+                cout << "HIT SOLUTION" << endl;
+                return true;
+            } else {
+                cout << "REVERSING" << endl;
+                reverse_changes(changes);
             }
         }
 
@@ -367,12 +414,21 @@ public:
 
     // Returns true if was able to solve without issue.
     // TODO: When trial is true, don't affect changes like removing from cells_left
-    bool solve(bool trial = false, num_t cnt = 0) {
+    bool solve(bool trial = false, num_t frame = 0) {
         cout << "Called solve with history size: " << history.size() << endl;
         std::vector<ChangeSet> changes_so_far;
+        num_t cnt = 0;
+
+        cout << "FRAME: " << frame << endl;
         while (!is_solved()) {
             cout << "Round : " << ++cnt << endl;
             std::vector<ChangeSet> changes;
+
+            if (!is_valid()) {
+                cout << "Failed to validate: " << endl << *this << endl;
+                break;
+            }
+
             // Mark down possible cells.
             check_possible();
 
@@ -388,13 +444,12 @@ public:
 
                 // Affect the changes
                 apply_changes(changes);
-
             } else {
                 cout << "Trial time " << endl;
                 cout << *this << endl;
 
-                // Deductions have failed, pick a possible value of node and check solution.
-                return try_and_check();
+                // Deductions have failed, pick a possible value of node and check solution. Only if still valid.
+                return try_and_check(frame);
             }
         }
 
@@ -519,7 +574,7 @@ public:
     std::vector<CellsCheck> row_checks;
     std::vector<CellsCheck> col_checks;
     std::vector<CellsCheck> block_checks;
-    std::vector<std::reference_wrapper<Cell> > cells_left; // Cells that aren't solved with certainty.
+    cells_vec_t cells_left; // Cells that aren't solved with certainty.
     std::vector<std::vector<Cell> > cells;
 };
 
@@ -669,11 +724,11 @@ TEST(Euler096_Sudoku, CheckCellsForValues) {
     std::vector<ChangeSet> changes;
     puzzle.check_cells_for_values(changes);
 
-    ASSERT_EQ(changes.size(), 3);
+    ASSERT_EQ(changes.size(), 11);
     auto front = changes.front();
-    ASSERT_EQ(front.cell.row, 4);
+    ASSERT_EQ(front.cell.row, 0);
     ASSERT_EQ(front.cell.col, 5);
-    ASSERT_EQ(front.cell.value, 4);
+    ASSERT_EQ(front.cell.value, 1);
 }
 
 TEST(Euler096_Sudoku, IsSolvedTrue) {
@@ -770,28 +825,66 @@ TEST(Euler096_Sudoku, SortCellsLeft) {
     puzzle.init_checkers();
     puzzle.check_possible();
 
+
     Cell &cell = puzzle.cells_left[0];
     ASSERT_EQ(cell.row, 0);
     ASSERT_EQ(cell.col, 0);
 
     puzzle.sort_cells_left();
+    for (auto e: puzzle.cells_left) {
+        e.get().print_details(cout);
+    }
 
     Cell &cell2 = puzzle.cells_left[0];
-    ASSERT_EQ(cell2.row, 4);
+    ASSERT_EQ(cell2.row, 0);
     ASSERT_EQ(cell2.col, 5);
+    ASSERT_EQ(cell2.possible.size(), 1);
 }
 
-// TODO: Better test method.
-TEST(Euler096_Sudoku, Solve) {
-    std::ifstream input(INPUT_SMALL, std::ifstream::in);
+TEST(Euler096_Sudoku, SolveSimple) {
+    std::ifstream input(INPUT_SMALL);
     Sudoku puzzle;
     input >> puzzle;
     puzzle.init_checkers();
-
-    cout << puzzle;
     puzzle.solve();
-    cout << line_break << endl << puzzle;
-    ASSERT_TRUE(puzzle.is_solved());
+
+    Sudoku puzzle_expect;
+    std::ifstream input2(INPUT_SMALL_SOLVED);
+    input2 >> puzzle_expect;
+    ASSERT_TRUE(puzzle == puzzle_expect);
+}
+
+TEST(Euler096_Sudoku, SolvePossibleMap) {
+    std::ifstream input(INPUT_SMALL2);
+    Sudoku puzzle;
+    input >> puzzle;
+    puzzle.init_checkers();
+    puzzle.solve();
+
+    Sudoku puzzle_expect;
+    std::ifstream input2(INPUT_SMALL2_SOLVED);
+    input2 >> puzzle_expect;
+
+    cout << puzzle << endl;
+    cout << puzzle_expect << endl;
+    ASSERT_TRUE(puzzle == puzzle_expect);
+}
+
+TEST(Euler096_Sudoku, SolveRecurseTrial) {
+    std::ifstream input(INPUT_SMALL3);
+    Sudoku puzzle;
+    input >> puzzle;
+    puzzle.init_checkers();
+    puzzle.solve();
+
+    Sudoku puzzle_expect;
+    std::ifstream input2(INPUT_SMALL3_SOLVED);
+    input2 >> puzzle_expect;
+
+    cout << "FINAL" << endl;
+    cout << puzzle << endl;
+    cout << puzzle_expect << endl;
+    ASSERT_TRUE(puzzle == puzzle_expect);
 }
 
 // TEST(Euler096, FinalSolution) {
@@ -800,7 +893,6 @@ TEST(Euler096_Sudoku, Solve) {
     // int grid_num = 0;
     // std::vector<int> failed;
 
-    // int cnt = 0;
     // while (input) {
         // Sudoku puzzle;
         // grid_num++;
@@ -813,16 +905,13 @@ TEST(Euler096_Sudoku, Solve) {
         // puzzle.init_checkers();
         // puzzle.solve();
         // if (!puzzle.solve()) {
+            // cout << "Failed: " << grid_num << endl;
             // failed.push_back(grid_num);
+        // } else {
+            // corner_sum += puzzle.top_cells();
         // }
         // cout << line_break << endl << puzzle << endl;
 
-        // See second puzzle.
-        // if (++cnt == 2) {
-            // puzzle.print_details();
-            // break;
-        // }
-        // corner_sum += puzzle.top_cells();
     // }
 
     // if (failed.size()) {
