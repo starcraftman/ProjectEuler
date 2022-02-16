@@ -18,6 +18,9 @@ but all with unique solutions (the first puzzle in the file is the example above
 
 By solving all fifty puzzles find the sum of the 3-digit numbers found in the top left corner of each solution grid; for example,
 483 is the 3-digit number found in the top left corner of the solution grid above.
+
+NOTES:
+Good resource on techniques: https://www.learn-sudoku.com/basic-techniques.html
  */
 /********************* Header Files ***********************/
 /* C++ Headers */
@@ -71,7 +74,18 @@ public:
             possible.insert(all_values.begin(), all_values.end());
         }
     };
-    void set_possible(std::vector<num_t> &vals) {
+    void add_possible(num_t val) {
+        possible.insert(val);
+    }
+    void remove_possible(num_t val) {
+        possible.erase(val);
+    }
+    void remove_possible(const std::set<num_t> &vals) {
+        for (auto val : vals) {
+            possible.erase(val);
+        }
+    }
+    void set_possible(const std::vector<num_t> &vals) {
         possible.clear();
         possible.insert(vals.begin(), vals.end());
     }
@@ -79,29 +93,20 @@ public:
         possible.clear();
         possible.insert(val);
     }
-    void remove_possible(num_t val) {
-        possible.erase(val);
-    }
-    void remove_all_possible(const std::set<num_t> &vals) {
-        for (auto val : vals) {
-            possible.erase(val);
-        }
-    }
-    void add_possible(num_t val) {
-        possible.insert(val);
-    }
-    void set_value(num_t val) {
-        last_value = value;
+    // Set the value and return a copy of cell before change.
+    Cell set_value(num_t val) {
+        Cell copy = *this;
         value = val;
         possible.clear();
+
+        return copy;
     }
     void restore(const Cell &cell) {
-        value = cell.last_value;
-        last_value = 0;
+        value = cell.value;
         possible.clear();
         possible.insert(cell.possible.begin(), cell.possible.end());
     }
-    void print_details(std::ostream &os) {
+    std::ostream& print_details(std::ostream &os) {
         os << "Cell (" << this->row << ", " << this->col << ")"
             << ": " << this->value;
 
@@ -112,7 +117,7 @@ public:
             }
         }
 
-        os << endl;
+        return os;
     }
 
     friend std::ostream & operator<<(std::ostream &os, const Cell &cell) {
@@ -144,33 +149,31 @@ public:
     num_t col = 0;
     num_t block = 0;
     num_t value = 0;
-    num_t last_value = 0;
     std::set<num_t> possible;
 };
 typedef std::vector<std::reference_wrapper<Cell>> cells_vec_t;
 
-// Simple change set records changes to the puzzle.
-// By storing the new value and old possible values we can revert the move by setting old cell to 0 and retoring possible.
+// Record a change made to the puzzle, done every time we set a value for certain.
+// This is just a storage class.
 class ChangeSet {
 public:
-    explicit ChangeSet(const Cell &cell, num_t new_val) : cell(cell) {
-        this->cell.last_value = this->cell.value;
-        this->cell.value = new_val;
-    }
-    ChangeSet(num_t row = 0, num_t col = 0, num_t value = 0) : cell(Cell(row, col, value)) {};
+    ChangeSet(const Cell &cell, num_t new_val) : cell(cell), new_val(new_val) { };
+    ChangeSet(num_t row = 0, num_t col = 0, num_t value = 0) :
+        cell(Cell(row, col)), new_val(value) {};  // Default + testing short cut
 
     friend std::ostream & operator<<(std::ostream &os, const ChangeSet &change) {
-        os << "Change (" << change.cell.row << "," << change.cell.col << ") => " << change.cell.value << endl;
+        os << "Change (" << change.cell.row << "," << change.cell.col << ") => " << change.new_val;
         return os;
     }
     bool operator==(const ChangeSet &other) const {
         return this->cell.row == other.cell.row &&
             this->cell.col == other.cell.col &&
-            this->cell.value == other.cell.value;
+            this->new_val == other.new_val;
     }
     bool operator!=(const ChangeSet &other) const { return !(*this == other); }
 
     Cell cell;
+    num_t new_val = 0;
 };
 
 // This class holds references to exactly 9 cells of a sudoku puzzle
@@ -190,41 +193,66 @@ public:
     }
     /*
      * Marks off the possible against what remains. Following is done:
-     * - Search existing values in a checker and put in a set.
+     * - Find all values set in the checker.
      * - Update the remains in the checker based on set found.
-     * - For every cell, remove all set values from possible.
-     * - Check the possible values left against cells,
-     *   if any possible is only in one cell, elminate other psosibles for that cell.
+     * - For every cell, remove all found values from possible.
+     * - Apply subsequent checks.
      */
     void mark_off_possible() {
         std::set<num_t> found;
+        remains = all_values;
         for (Cell &cell : cells) {
-            found.insert(cell.value);
-        }
-        found.erase(0);
-        for (auto val : found) {
-            remains.erase(val);
+            if (cell.value != 0) {
+                found.insert(cell.value);
+                remains.erase(cell.value);
+            }
         }
 
+        for (Cell &cell : cells) {
+            if (cell.value == 0) {
+                cell.remove_possible(found);
+            }
+        }
+    }
+    // Strategy: Hidden Singles
+    void check_hidden_singles() {
         std::map<num_t, cells_vec_t> cells_possible;
         for (int i = 0; i != 10; ++i) {
             cells_possible[i] = cells_vec_t();
         }
         for (Cell &cell : cells) {
             if (cell.value == 0) {
-                cell.remove_all_possible(found);
                 // Iterate remaining and build map of possible value -> cells vector.
                 for (auto val : cell.possible) {
                     cells_possible[val].push_back(std::ref(cell));
                 }
             }
         }
-
         // If only one cell in a row can be a value, eliminate all other possibles.
         for (auto possible_pair : cells_possible) {
             if (possible_pair.second.size() == 1) {
                 Cell &only = possible_pair.second.back();
                 only.set_possible(possible_pair.first);
+            }
+        }
+    }
+    // Strategy: Naked Pairs, Triples, Quadruples
+    // Check and eliminate possible based on naked groupings.
+    void check_naked_groups() {
+        std::map<std::set<num_t>, cells_vec_t> possible_to_cells;
+        for (Cell &cell : cells) {
+            if (cell.value == 0 && cell.possible.size() > 1) {
+                possible_to_cells[cell.possible].push_back(cell);
+            }
+        }
+
+        for (auto pair : possible_to_cells) {
+            if (pair.first.size() == pair.second.size()) {
+                for (Cell &cell : cells) {
+                    if (cell.value == 0 && cell.possible != pair.first) {
+                        cell.remove_possible(pair.first);
+                    }
+                }
             }
         }
     }
@@ -286,9 +314,23 @@ std::vector<num_t> cells_check_union(const CellsCheck &row_check, const CellsChe
 // Based on the classic 9x9 grid.
 // Any positioning starts in top left corner.
 // So block 0 is top left, row 0 is first and so on.
+//
+// General usage restriction:
+//  Sudoku puzzle;
+//  fin >> puzzle; // Existing open file input stream
+//  puzzle.init_checkers() // Setup remainder of puzzleskk
 class Sudoku {
 public:
     Sudoku() {
+        init_cells();
+    }
+    explicit Sudoku(std::ifstream &fin) {
+        init_cells();
+        fin >> *this;
+        init_checkers();
+    }
+    // Initialize the cells.
+    void init_cells() {
         for (int row = 0; row < 9; ++row) {
             std::vector<Cell> cell_row;
             for (int col  = 0; col  < 9; ++col ) {
@@ -318,18 +360,95 @@ public:
         }
     }
 
-    // A single pass over all row, column and block checks to mark off possible solutions.
-    void check_possible() {
+    // Looks over all cell areas and eliminates simple possible values.
+    void reduce_possible() {
         std::vector<std::vector<CellsCheck> > all_checks = {row_checks, col_checks, block_checks};
         for (std::vector<CellsCheck> &checks : all_checks) {
             for (CellsCheck &check : checks) {
                 check.mark_off_possible();
+                check.check_hidden_singles();
+                check.check_naked_groups();
             }
         }
     }
 
+    // Strategy: Omission
+    // Cross check between two different types of checkers, like row and block.
+    // i.e. if 3 can only be in top 2 cells of top left block, eliminate 2 from all others in that block.
+    // Ref: https://www.learn-sudoku.com/omission.html
+    // Important: Run after reduce_possible
+    void check_omissions() {
+        // Checks the row and column variation
+        std::vector<CellsCheck> all_checks = row_checks;
+        all_checks.insert(all_checks.end(), col_checks.begin(), col_checks.end());
+        for (auto check : all_checks) {
+            for (auto left : check.remains) {
+                //For every block of row or col, count how many times left in that row.
+                std::map<num_t, num_t> block_map;
+                for (Cell &cell : check.cells) {
+                    if (cell.possible.find(left) != cell.possible.end()) {
+                        block_map[cell.block]++;
+                    }
+                }
+
+                // Omission found when 2 or 3 of same left ONLY found in one block.
+                if (block_map.size() == 1 && block_map.begin()->second > 1) {
+                    num_t block_num = block_map.begin()->first;
+                    CellsCheck &block = block_checks[block_num];
+                    // Erase from all cells that aren't the row.
+                    for (Cell &cell : block.cells) {
+                        // If we are checking rows, eliminate those that aren't current row.
+                        // If we are checking cols, eliminate when not equal on the column
+                        if ((check.type == CheckType::Row && check.num != cell.row) ||
+                            (check.type == CheckType::Column && check.num != cell.col)) {
+                            cell.possible.erase(left);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check rows and columns within a block
+        for (auto check : block_checks) {
+            for (auto left : check.remains) {
+                //For every row of the block, count how many times left in that row only.
+                std::map<num_t, num_t> row_map;
+                std::map<num_t, num_t> col_map;
+                for (Cell &cell : check.cells) {
+                    if (cell.possible.find(left) != cell.possible.end()) {
+                        row_map[cell.row]++;
+                        col_map[cell.col]++;
+                    }
+                }
+
+                // Omission found when 2 or 3 of same left ONLY found in one row.
+                if (row_map.size() == 1 && row_map.begin()->second > 1) {
+                    num_t row_num = row_map.begin()->first;
+                    CellsCheck &row = row_checks[row_num];
+                    for (Cell &cell : row.cells) {
+                        if (cell.block != check.num) {
+                            cell.possible.erase(left);
+                        }
+                    }
+                }
+
+                // Omission found when 2 or 3 of same left ONLY found in one column.
+                if (col_map.size() == 1 && col_map.begin()->second > 1) {
+                    num_t row_num = col_map.begin()->first;
+                    CellsCheck &col = col_checks[row_num];
+                    for (Cell &cell : col.cells) {
+                        if (cell.block != check.num) {
+                            cell.possible.erase(left);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Strategy: Lone Singles - Any cell with only 1 possible is that value.
     // Find all cells with only one possibility and add the change.
-    void check_cells_for_values(std::vector<ChangeSet> &changes) {
+    void find_changes(std::vector<ChangeSet> &changes) {
         for (auto itr = cells_left.begin(); itr != cells_left.end(); ++itr) {
             Cell &cell = *itr;
             if (cell.possible.size() == 1) {
@@ -345,10 +464,10 @@ public:
             history.push_back(change);
             const Cell &cell = change.cell;
 
-            cells[cell.row][cell.col].set_value(cell.value);
-            row_checks[cell.row].eliminate(cell.value);
-            col_checks[cell.col].eliminate(cell.value);
-            block_checks[cell.block].eliminate(cell.value);
+            cells[cell.row][cell.col].set_value(change.new_val);
+            row_checks[cell.row].eliminate(change.new_val);
+            col_checks[cell.col].eliminate(change.new_val);
+            block_checks[cell.block].eliminate(change.new_val);
         }
     }
 
@@ -358,9 +477,9 @@ public:
             const Cell &cell = itr->cell;
 
             cells[cell.row][cell.col].restore(cell);
-            row_checks[cell.row].restore(cell.value);
-            col_checks[cell.col].restore(cell.value);
-            block_checks[cell.block].restore(cell.value);
+            row_checks[cell.row].restore(itr->new_val);
+            col_checks[cell.col].restore(itr->new_val);
+            block_checks[cell.block].restore(itr->new_val);
         }
     }
 
@@ -373,22 +492,27 @@ public:
     }
 
     // Take a low possibilities cell and try them temporarily and check.
-// FIXME: This part needs more work
+    // Try one cell's possible values per call, one of the reamining MUST be valid.
+    // TODO: Rewrite this, & have global state save
     bool try_and_check(num_t frame) {
         sort_cells_left();
 
         cout << "Called Try and Check : " << endl;
         for (Cell &cell : cells_left) {
-            cell.print_details(cout);
+            cell.print_details(cout) << endl;
         }
 
         // Itemize all possible changes and try one at a time.
         std::deque<ChangeSet> all_possible;
         for (Cell &cell : cells_left) {
             if (cell.possible.size() > 1) {
+                cout << "Selecting this cell to try: " << endl;
+                cell.print_details(cout) << endl;
                 for (auto val : cell.possible) {
                     all_possible.push_back(ChangeSet(cell, val));
                 }
+
+                break;
             }
         }
 
@@ -397,7 +521,10 @@ public:
             changes.push_back(all_possible.front());
             all_possible.pop_front();
 
-            cout << "Attempting: " << changes.back() << endl;
+            cout << "Trying: " << changes.back() << endl;
+            for (Cell &cell : cells_left) {
+                cell.print_details(cout) << endl;
+            }
 
             apply_changes(changes);
             if (solve(true, frame + 1)) {
@@ -426,30 +553,33 @@ public:
 
             if (!is_valid()) {
                 cout << "Failed to validate: " << endl << *this << endl;
+                cout << *this << endl;
                 break;
             }
 
             // Mark down possible cells.
-            check_possible();
+            reduce_possible();
+            check_omissions();
 
             // Visit cells left and determine possible changes, returned in vector
-            check_cells_for_values(changes);
+            find_changes(changes);
 
             // If deduced changes possible, make them
             if (changes.size() != 0) {
                 for (auto change : changes) {
                     changes_so_far.push_back(change);
-                    cout << change;
+                    cout << change << endl;
                 }
 
                 // Affect the changes
                 apply_changes(changes);
             } else {
-                cout << "Trial time " << endl;
+                cout << "Ran out of deductions... " << endl;
                 cout << *this << endl;
 
                 // Deductions have failed, pick a possible value of node and check solution. Only if still valid.
-                return try_and_check(frame);
+                // return try_and_check(frame);
+                return false; // Temporarily until above fixed.
             }
         }
 
@@ -515,9 +645,9 @@ public:
     void print_details() {
         for (auto &row : cells) {
             for (auto &cell : row) {
-                cell.print_details(cout);
+                cell.print_details(cout) << endl;
             }
-            cout << endl << line_break << endl;
+            cout << line_break << endl;
         }
     }
 
@@ -606,14 +736,83 @@ TEST(Euler096_Cell, RemovePossible) {
     ASSERT_EQ(cell.possible, expect);
 }
 
+TEST(Euler096_Cell, RemovePossibleSet) {
+    Cell cell(7, 0, 0);
+    cell.possible.clear();
+    cell.add_possible(7);
+    cell.add_possible(6);
+    cell.add_possible(3);
+    cell.add_possible(1);
+    cell.remove_possible({1, 6, 7});
+    std::set<num_t> expect = {3};
+    ASSERT_EQ(cell.possible, expect);
+}
+
+TEST(Euler096_Cell, SetPossible) {
+    Cell cell(7, 0, 0);
+    cell.set_possible(5);
+    ASSERT_TRUE(cell.possible.find(5) != cell.possible.end());
+    ASSERT_EQ(cell.possible.size(), 1);
+}
+
+TEST(Euler096_Cell, SetPossibleVector) {
+    Cell cell(7, 0, 0);
+    std::vector<num_t> new_pos = {1, 2, 4};
+    cell.set_possible(new_pos);
+    ASSERT_TRUE(cell.possible.find(4) != cell.possible.end());
+    ASSERT_EQ(cell.possible.size(), 3);
+}
+
 TEST(Euler096_Cell, SetValue) {
     Cell cell(7, 0, 0);
-    cell.add_possible(7);
-    cell.add_possible(2);
-    cell.add_possible(3);
-    cell.set_value(7);
+    cell.set_possible({2, 3, 7});
+    Cell old_cell = cell.set_value(7);
     std::set<num_t> expect;
     ASSERT_EQ(cell.possible, expect);
+    ASSERT_EQ(cell.value, 7);
+    ASSERT_EQ(old_cell.value, 0);
+    ASSERT_EQ(old_cell.possible.size(), 3);
+}
+
+TEST(Euler096_Cell, Restore) {
+    Cell cell(7, 0, 0);
+    cell.set_possible({2, 3, 7});
+    Cell old_cell = cell.set_value(7);
+    cell.restore(old_cell);
+    std::set<num_t> expect = {2, 3, 7};
+    ASSERT_EQ(cell.possible, expect);
+    ASSERT_EQ(cell.value, 0);
+}
+
+TEST(Euler096_Cell, EqualityOperator) {
+    Cell cell(7, 0, 9);
+    Cell cell2(7, 0, 9);
+    Cell cell3(8, 0, 9);
+    Cell cell4(7, 0, 1);
+    ASSERT_EQ(cell, cell2);
+    ASSERT_NE(cell, cell3);
+    ASSERT_NE(cell, cell4);
+}
+
+TEST(Euler096_Cell, LessThanOperator) {
+    Cell cell(7, 0, 0);
+    cell.set_possible({1, 2, 7, 8, 9});
+    Cell cell2(7, 0, 0);
+    cell2.set_possible({1, 2, 7});
+    Cell cell3(7, 0, 0);
+    cell3.possible.clear();
+    ASSERT_LT(cell2, cell);
+    ASSERT_LT(cell3, cell);
+
+    // Least row is less if equal
+    Cell cell4(4, 0, 0);
+    cell4.possible.clear();
+    ASSERT_LT(cell4, cell3);
+
+    // Least col is less if equal
+    Cell cell5(4, 2, 0);
+    cell5.possible.clear();
+    ASSERT_LT(cell4, cell5);
 }
 
 TEST(Euler096_Cell, OutputOperator) {
@@ -621,6 +820,53 @@ TEST(Euler096_Cell, OutputOperator) {
     std::stringstream ss;
     ss << cell;
     ASSERT_EQ(ss.str(), std::string("9"));
+}
+
+TEST(Euler096_Cell, PrintDetails) {
+    Cell cell(7, 0, 9);
+    std::stringstream ss;
+    cell.print_details(ss);
+    ASSERT_EQ(ss.str(), std::string("Cell (7, 0): 9"));
+}
+
+TEST(Euler096_ChangeSet, Constructor) {
+    Cell cell(7, 0, 0);
+    cell.set_possible({1, 2, 9});
+
+    ChangeSet change(cell, 7);
+    ASSERT_EQ(change.cell, cell);
+    ASSERT_EQ(change.new_val, 7);
+}
+
+TEST(Euler096_ChangeSet, ConstructorDefault) {
+    ChangeSet change(0, 1, 7);
+    ASSERT_EQ(change.cell.col, 1);
+    ASSERT_EQ(change.new_val, 7);
+}
+
+TEST(Euler096_ChangeSet, OutputOperator) {
+    Cell cell(7, 0, 0);
+    cell.set_possible({1, 2, 9});
+
+    ChangeSet change(cell, 7);
+    std::stringstream ss;
+    ss << change;
+    ASSERT_EQ(ss.str(), std::string("Change (7,0) => 7"));
+}
+
+TEST(Euler096_ChangeSet, EqualityOperator) {
+    Cell cell(7, 0, 0);
+    cell.set_possible({1, 2, 9});
+
+    ChangeSet change(cell, 7);
+    ChangeSet change2(cell, 7);
+    ASSERT_EQ(change, change2);
+
+    ChangeSet change3(cell, 5);
+    ASSERT_NE(change, change3);
+    Cell cell2(3, 3, 0);
+    ChangeSet change4(cell2, 5);
+    ASSERT_NE(change, change4);
 }
 
 TEST(Euler096_CellsCheck, Add) {
@@ -639,14 +885,80 @@ TEST(Euler096_CellsCheck, Add) {
 
 TEST(Euler096_CellsCheck, MarkOffPossible) {
     std::ifstream input(INPUT_SMALL, std::ifstream::in);
-    Sudoku puzzle;
-    input >> puzzle;
-    puzzle.init_checkers();
+    Sudoku puzzle(input);
 
     auto check = puzzle.row_checks[0];
     ASSERT_EQ(puzzle.cells[0][0].possible.size(), 9);
     check.mark_off_possible();
     ASSERT_EQ(puzzle.cells[0][0].possible.size(), 6);
+}
+
+TEST(Euler096_CellsCheck, CheckHiddenSingles) {
+    std::ifstream input(INPUT_SMALL, std::ifstream::in);
+    Sudoku puzzle(input);
+
+    std::vector<num_t> poss = {7, 9};
+    puzzle.cells[0][1].set_possible(poss);
+    puzzle.cells[0][7].set_possible(poss);
+    CellsCheck &check = puzzle.row_checks[0];
+    check.mark_off_possible();
+    for (Cell & e : check.cells) {
+        if (e.col != 0) {
+            e.remove_possible(1);
+        }
+    }
+
+    check.check_hidden_singles();
+    std::set<num_t> expect = {1};
+    ASSERT_EQ(check.cells[0].get().possible, expect);
+}
+
+TEST(Euler096_CellsCheck, CheckNakedPairs) {
+    std::ifstream input(INPUT_SMALL, std::ifstream::in);
+    Sudoku puzzle(input);
+
+    std::vector<num_t> poss = {7, 9};
+    puzzle.cells[0][1].set_possible(poss);
+    puzzle.cells[0][7].set_possible(poss);
+    CellsCheck &check = puzzle.row_checks[0];
+
+    check.mark_off_possible();
+    check.check_naked_groups();
+    std::set<num_t> expect = {1, 4, 5, 8};
+    ASSERT_EQ(check.cells[8].get().possible, expect);
+}
+
+TEST(Euler096_CellsCheck, Restore) {
+    CellsCheck check;
+    Cell cell(0, 0, 9);
+    check.add(cell);
+    cell = Cell(0, 1, 1);
+    check.add(cell);
+    cell = Cell(0, 2, 5);
+    check.add(cell);
+
+    std::set<num_t> expect = {2, 3, 4, 6, 7, 8};
+    ASSERT_EQ(check.remains, expect);
+    check.restore(9);
+    expect.insert(9);
+    ASSERT_EQ(check.remains, expect);
+}
+
+TEST(Euler096_CellsCheck, Eliminate) {
+    CellsCheck check;
+    Cell cell(0, 0, 9);
+    check.add(cell);
+    cell = Cell(0, 1, 1);
+    check.add(cell);
+    cell = Cell(0, 2, 5);
+    check.add(cell);
+
+    std::set<num_t> initial = {2, 3, 4, 6, 7, 8};
+    ASSERT_EQ(check.remains, initial);
+    check.eliminate(7);
+    check.eliminate(8);
+    std::set<num_t> expect = {2, 3, 4, 6};
+    ASSERT_EQ(check.remains, expect);
 }
 
 TEST(Euler096_CellsCheck, OutputOperator) {
@@ -677,6 +989,26 @@ TEST(Euler096_CellsCheck, CellsCheckUnion) {
     ASSERT_EQ(result, expect);
 }
 
+TEST(Euler096_Sudoku, DefaultConstructor) {
+    std::ifstream input(INPUT_SMALL, std::ifstream::in);
+    Sudoku puzzle;
+    std::stringstream ss;
+    ss << puzzle;
+    std::string expect = "0 0 0 0 0 0 0 0 0";
+
+    ASSERT_TRUE(ss.str().find(expect) != std::string::npos);
+}
+
+TEST(Euler096_Sudoku, FileConstructor) {
+    std::ifstream input(INPUT_SMALL, std::ifstream::in);
+    Sudoku puzzle(input);
+    std::stringstream ss;
+    ss << puzzle;
+    std::string expect = "0 0 3 0 2 0 6 0 0";
+
+    ASSERT_TRUE(ss.str().find(expect) != std::string::npos);
+}
+
 TEST(Euler096_Sudoku, InputOperator) {
     std::ifstream input(INPUT_SMALL, std::ifstream::in);
     Sudoku puzzle;
@@ -690,94 +1022,117 @@ TEST(Euler096_Sudoku, InputOperator) {
 
 TEST(Euler096_Sudoku, InitCheckers) {
     std::ifstream input(INPUT_SMALL, std::ifstream::in);
-    Sudoku puzzle;
-    input >> puzzle;
-    puzzle.init_checkers();
+    Sudoku puzzle(input);
 
     std::set<num_t> expect = {1, 4, 5, 7, 8, 9};
     ASSERT_EQ(puzzle.row_checks.at(0).remains, expect);
 }
 
-TEST(Euler096_Sudoku, CheckPossible) {
+TEST(Euler096_Sudoku, ReducePossible) {
     std::ifstream input(INPUT_SMALL, std::ifstream::in);
-    Sudoku puzzle;
-    input >> puzzle;
-    puzzle.init_checkers();
+    Sudoku puzzle(input);
 
     ASSERT_EQ(puzzle.cells[4][5].value, 0);
     ASSERT_EQ(puzzle.cells[4][6].value, 0);
     ASSERT_EQ(puzzle.cells[4][5].possible.size(), 9);
     ASSERT_EQ(puzzle.cells[4][6].possible.size(), 9);
-    puzzle.check_possible();
+    puzzle.reduce_possible();
     ASSERT_EQ(puzzle.cells[4][5].possible.size(), 1);
     ASSERT_EQ(puzzle.cells[4][6].possible.size(), 1);
     ASSERT_EQ(*puzzle.cells[4][5].possible.begin(), 4);
     ASSERT_EQ(*puzzle.cells[4][6].possible.begin(), 1);
 }
 
-TEST(Euler096_Sudoku, CheckCellsForValues) {
-    std::ifstream input(INPUT_SMALL, std::ifstream::in);
+TEST(Euler096_Sudoku, CheckOmissions) {
     Sudoku puzzle;
-    input >> puzzle;
+    // Manually create an omission scenario across top rows
+    puzzle.cells[0][0].set_possible({6, 7});
+    puzzle.cells[0][1].set_possible({1, 6, 7});
+    puzzle.cells[0][2].set_value(3);
+    puzzle.cells[0][3].set_possible({1, 6, 9});
+    puzzle.cells[0][4].set_possible({1, 8, 9});
+    puzzle.cells[0][5].set_possible({2, 6});
+    puzzle.cells[0][6].set_value(4);
+    puzzle.cells[0][7].set_possible({2, 8});
+    puzzle.cells[0][8].set_value(5);
+
+    puzzle.cells[1][0].set_possible({7, 8});
+    puzzle.cells[1][1].set_value(2);
+    puzzle.cells[1][2].set_possible({1, 5});
+    puzzle.cells[1][3].set_value(4);
+    puzzle.cells[1][4].set_value(3);
+    puzzle.cells[1][5].set_possible({5, 7});
+    puzzle.cells[1][6].set_possible({1, 9});
+    puzzle.cells[1][7].set_value(6);
+    puzzle.cells[1][8].set_possible({1, 7, 9});
+
+    puzzle.cells[2][0].set_value(9);
+    puzzle.cells[2][1].set_possible({1, 6, 7});
+    puzzle.cells[2][2].set_value(4);
+    puzzle.cells[2][3].set_possible({1, 5, 6});
+    puzzle.cells[2][4].set_possible({1, 5, 8});
+    puzzle.cells[2][5].set_possible({2, 5, 6});
+    puzzle.cells[2][6].set_possible({2, 7, 8});
+    puzzle.cells[2][7].set_possible({2, 3, 8});
+    puzzle.cells[2][8].set_possible({2, 3, 7});
+
+    puzzle.print_details();
     puzzle.init_checkers();
-    puzzle.check_possible();
+    puzzle.reduce_possible();
+    puzzle.check_omissions();
+    puzzle.print_details();
+
+}
+
+TEST(Euler096_Sudoku, FindChanges) {
+    std::ifstream input(INPUT_SMALL, std::ifstream::in);
+    Sudoku puzzle(input);
+    puzzle.reduce_possible();
     std::vector<ChangeSet> changes;
-    puzzle.check_cells_for_values(changes);
+    puzzle.find_changes(changes);
 
     ASSERT_EQ(changes.size(), 11);
     auto front = changes.front();
     ASSERT_EQ(front.cell.row, 0);
     ASSERT_EQ(front.cell.col, 5);
-    ASSERT_EQ(front.cell.value, 1);
+    ASSERT_EQ(front.new_val, 1);
 }
 
 TEST(Euler096_Sudoku, IsSolvedTrue) {
     std::ifstream input(INPUT_SMALL_SOLVED);
-    Sudoku puzzle;
-    input >> puzzle;
-    puzzle.init_checkers();
+    Sudoku puzzle(input);
     ASSERT_TRUE(puzzle.is_solved());
 }
 
 TEST(Euler096_Sudoku, IsSolvedFalse) {
     std::ifstream input(INPUT_SMALL);
-    Sudoku puzzle;
-    input >> puzzle;
-    puzzle.init_checkers();
+    Sudoku puzzle(input);
     ASSERT_FALSE(puzzle.is_solved());
 }
 
 TEST(Euler096_Sudoku, IsValidTrue) {
     std::ifstream input(INPUT_SMALL);
-    Sudoku puzzle;
-    input >> puzzle;
-    puzzle.init_checkers();
+    Sudoku puzzle(input);
     ASSERT_TRUE(puzzle.is_valid());
 }
 
 TEST(Euler096_Sudoku, IsValidFalseRow) {
     std::ifstream input(INPUT_SMALL);
-    Sudoku puzzle;
-    input >> puzzle;
-    puzzle.init_checkers();
+    Sudoku puzzle(input);
     puzzle.cells[0][2].value = 2;
     ASSERT_FALSE(puzzle.is_valid());
 }
 
 TEST(Euler096_Sudoku, IsValidFalseCol) {
     std::ifstream input(INPUT_SMALL);
-    Sudoku puzzle;
-    input >> puzzle;
-    puzzle.init_checkers();
+    Sudoku puzzle(input);
     puzzle.cells[2][0].value = 9;
     ASSERT_FALSE(puzzle.is_valid());
 }
 
 TEST(Euler096_Sudoku, IsValidFalseBlock) {
     std::ifstream input(INPUT_SMALL);
-    Sudoku puzzle;
-    input >> puzzle;
-    puzzle.init_checkers();
+    Sudoku puzzle(input);
     puzzle.cells[2][1].value = 9;
     ASSERT_FALSE(puzzle.is_valid());
 }
@@ -791,39 +1146,37 @@ TEST(Euler096_Sudoku, TopCells) {
 
 TEST(Euler096_Sudoku, ApplyChanges) {
     std::ifstream input(INPUT_SMALL);
-    Sudoku puzzle;
-    input >> puzzle;
-    puzzle.init_checkers();
+    Sudoku puzzle(input);
     std::vector<ChangeSet> changes;
     changes.push_back(ChangeSet(0, 0, 5));
     changes.push_back(ChangeSet(1, 1, 9));
-    puzzle.apply_changes(changes);
 
+    ASSERT_EQ(puzzle.cells[0][0].value, 0);
+    ASSERT_EQ(puzzle.cells[1][1].value, 0);
+    puzzle.apply_changes(changes);
     ASSERT_EQ(puzzle.cells[0][0].value, 5);
     ASSERT_EQ(puzzle.cells[1][1].value, 9);
 }
 
 TEST(Euler096_Sudoku, ReverseChanges) {
     std::ifstream input(INPUT_SMALL);
-    Sudoku puzzle;
-    input >> puzzle;
-    puzzle.init_checkers();
+    Sudoku puzzle(input);
     std::vector<ChangeSet> changes;
     changes.push_back(ChangeSet(0, 0, 5));
     changes.push_back(ChangeSet(1, 1, 9));
-    puzzle.apply_changes(changes);
-    puzzle.reverse_changes(changes);
 
+    puzzle.apply_changes(changes);
+    ASSERT_EQ(puzzle.cells[0][0].value, 5);
+    ASSERT_EQ(puzzle.cells[1][1].value, 9);
+    puzzle.reverse_changes(changes);
     ASSERT_EQ(puzzle.cells[0][0].value, 0);
     ASSERT_EQ(puzzle.cells[1][1].value, 0);
 }
 
 TEST(Euler096_Sudoku, SortCellsLeft) {
     std::ifstream input(INPUT_SMALL);
-    Sudoku puzzle;
-    input >> puzzle;
-    puzzle.init_checkers();
-    puzzle.check_possible();
+    Sudoku puzzle(input);
+    puzzle.reduce_possible();
 
 
     Cell &cell = puzzle.cells_left[0];
@@ -831,46 +1184,39 @@ TEST(Euler096_Sudoku, SortCellsLeft) {
     ASSERT_EQ(cell.col, 0);
 
     puzzle.sort_cells_left();
-    for (auto e: puzzle.cells_left) {
-        e.get().print_details(cout);
-    }
 
     Cell &cell2 = puzzle.cells_left[0];
     ASSERT_EQ(cell2.row, 0);
     ASSERT_EQ(cell2.col, 5);
     ASSERT_EQ(cell2.possible.size(), 1);
+    Cell &cell3 = puzzle.cells_left.back();
+    ASSERT_EQ(cell3.row, 8);
+    ASSERT_EQ(cell3.col, 7);
+    ASSERT_EQ(cell3.possible.size(), 5);
 }
 
 TEST(Euler096_Sudoku, SolveSimple) {
     std::ifstream input(INPUT_SMALL);
-    Sudoku puzzle;
-    input >> puzzle;
-    puzzle.init_checkers();
+    Sudoku puzzle(input);
     puzzle.solve();
 
-    Sudoku puzzle_expect;
     std::ifstream input2(INPUT_SMALL_SOLVED);
-    input2 >> puzzle_expect;
+    Sudoku puzzle_expect(input2);
     ASSERT_TRUE(puzzle == puzzle_expect);
 }
 
 TEST(Euler096_Sudoku, SolvePossibleMap) {
     std::ifstream input(INPUT_SMALL2);
-    Sudoku puzzle;
-    input >> puzzle;
-    puzzle.init_checkers();
+    Sudoku puzzle(input);
     puzzle.solve();
 
-    Sudoku puzzle_expect;
     std::ifstream input2(INPUT_SMALL2_SOLVED);
-    input2 >> puzzle_expect;
+    Sudoku puzzle_expect(input2);
 
-    cout << puzzle << endl;
-    cout << puzzle_expect << endl;
     ASSERT_TRUE(puzzle == puzzle_expect);
 }
 
-TEST(Euler096_Sudoku, SolveRecurseTrial) {
+TEST(Euler096_Sudoku, SolveDueToOmission) {
     std::ifstream input(INPUT_SMALL3);
     Sudoku puzzle;
     input >> puzzle;
@@ -887,79 +1233,40 @@ TEST(Euler096_Sudoku, SolveRecurseTrial) {
     ASSERT_TRUE(puzzle == puzzle_expect);
 }
 
-// TEST(Euler096, FinalSolution) {
-    // std::ifstream input(INPUT, std::ifstream::in);
-    // int corner_sum = 0;
-    // int grid_num = 0;
-    // std::vector<int> failed;
+TEST(Euler096, FinalSolution) {
+    std::ifstream input(INPUT, std::ifstream::in);
+    int corner_sum = 0;
+    int grid_num = 0;
+    std::vector<int> failed;
 
-    // while (input) {
-        // Sudoku puzzle;
-        // grid_num++;
-        // std::string grid_line;
-        // std::getline(input, grid_line);
-        // cout << grid_line << endl;
+    while (input) {
+        Sudoku puzzle;
+        grid_num++;
+        std::string grid_line;
+        std::getline(input, grid_line);
+        cout << grid_line << endl;
 
-        // input >> puzzle;
-        // cout << puzzle << endl;
-        // puzzle.init_checkers();
-        // puzzle.solve();
-        // if (!puzzle.solve()) {
-            // cout << "Failed: " << grid_num << endl;
-            // failed.push_back(grid_num);
-        // } else {
-            // corner_sum += puzzle.top_cells();
-        // }
-        // cout << line_break << endl << puzzle << endl;
+        input >> puzzle;
+        cout << puzzle << endl;
+        puzzle.init_checkers();
+        puzzle.solve();
+        if (!puzzle.solve()) {
+            cout << "Failed: " << grid_num << endl;
+            failed.push_back(grid_num);
+        } else {
+            corner_sum += puzzle.top_cells();
+        }
+        cout << line_break << endl << puzzle << endl;
 
-    // }
+    }
 
-    // if (failed.size()) {
-        // cout << "Failed to solve " << failed.size() << " grids: ";
-        // for (auto num : failed) {
-            // cout << num << ", ";
-        // }
-        // cout << endl;
-    // } else {
-        // cout << "The sum of the top left cells of solved sudoku puzzles is: " << corner_sum << endl;
-    // }
-// }
-
-    // Goes in Sudoku class
-    // FIXME: Rewrite or gut. Was going for a slightly more efficient stategy than scanning all, involving triggering only scans for
-    //        Checkeers where values changed under the cells.
-    // bool check_possible() {
-        // bool deduction_made = false;
-        // for (auto &row : cells) {
-            // for (auto &cell : row) {
-                // if (cell.value != 0) {
-                    // continue;
-                // }
-
-                // auto &row_check = row_checks.at(cell.row);
-                // auto &col_check = col_checks.at(cell.col);;
-                // auto &block_check = block_checks.at(cell.block);
-                // // std::vector<num_t> result = cells_check_union(row_check, col_check, block_check);
-
-                // // cout << "Found ";
-                // // for (auto val : result) {
-                   // // cout << val << " ";
-                // // }
-                // // cout << endl;
-
-                // // if (result.size() == 1) {
-                    // // deduction_made = true;
-                    // // num_t value = result.back();
-                    // // cell.set_value(value);
-                    // // row_check.eliminate(value);
-                    // // col_check.eliminate(value);
-                    // // block_check.eliminate(value);
-                // // } else {
-                    // // cell.set_possible(result);
-                // // }
-            // }
-        // }
-
-        // return deduction_made;
-    // }
-
+    if (failed.size()) {
+        cout << "Failed to solve " << failed.size() << " grids: ";
+        for (auto num : failed) {
+            cout << num << ", ";
+        }
+        cout << endl;
+    } else {
+        cout << "The sum of the top left cells of solved sudoku puzzles is: " << corner_sum << endl;
+    }
+}
