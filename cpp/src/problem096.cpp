@@ -295,35 +295,18 @@ public:
     cells_vec_t cells;
 };
 
-// Equal to: (A U B U C)
-//  Not sure if will use.
-inline
-std::vector<num_t> cells_check_union(const CellsCheck &row_check, const CellsCheck &col_check, const CellsCheck &block_check) {
-    std::vector<num_t> inter;
-    std::vector<num_t> result;
-    std::set_union(row_check.remains.begin(), row_check.remains.end(),
-                   col_check.remains.begin(), col_check.remains.end(),
-                   std::back_inserter(inter));
-    std::set_union(inter.begin(), inter.end(),
-                   block_check.remains.begin(), block_check.remains.end(),
-                   std::back_inserter(result));
-
-    return result;
-}
-
 // Based on the classic 9x9 grid.
 // Any positioning starts in top left corner.
 // So block 0 is top left, row 0 is first and so on.
 //
-// General usage restriction:
-//  Sudoku puzzle;
-//  fin >> puzzle; // Existing open file input stream
-//  puzzle.init_checkers() // Setup remainder of puzzleskk
+// General demo:
+//  Sudoku puzzle(fin); // fin is any istream
+//  cout << puzzle << endl;
+//  puzzle.solve()
+//  cout << puzzle << endl;
 class Sudoku {
 public:
-    Sudoku() {
-        init_cells();
-    }
+    Sudoku() { init_cells(); }
     explicit Sudoku(std::ifstream &fin) {
         init_cells();
         fin >> *this;
@@ -368,80 +351,6 @@ public:
                 check.mark_off_possible();
                 check.check_hidden_singles();
                 check.check_naked_groups();
-            }
-        }
-    }
-
-    // Strategy: Omission
-    // Cross check between two different types of checkers, like row and block.
-    // i.e. if 3 can only be in top 2 cells of top left block, eliminate 2 from all others in that block.
-    // Ref: https://www.learn-sudoku.com/omission.html
-    // Important: Run after reduce_possible
-    void check_omissions() {
-        // Checks the row and column variation
-        std::vector<CellsCheck> all_checks = row_checks;
-        all_checks.insert(all_checks.end(), col_checks.begin(), col_checks.end());
-        for (auto check : all_checks) {
-            for (auto left : check.remains) {
-                //For every block of row or col, count how many times left in that row.
-                std::map<num_t, num_t> block_map;
-                for (Cell &cell : check.cells) {
-                    if (cell.possible.find(left) != cell.possible.end()) {
-                        block_map[cell.block]++;
-                    }
-                }
-
-                // Omission found when 2 or 3 of same left ONLY found in one block.
-                if (block_map.size() == 1 && block_map.begin()->second > 1) {
-                    num_t block_num = block_map.begin()->first;
-                    CellsCheck &block = block_checks[block_num];
-                    // Erase from all cells that aren't the row.
-                    for (Cell &cell : block.cells) {
-                        // If we are checking rows, eliminate those that aren't current row.
-                        // If we are checking cols, eliminate when not equal on the column
-                        if ((check.type == CheckType::Row && check.num != cell.row) ||
-                            (check.type == CheckType::Column && check.num != cell.col)) {
-                            cell.possible.erase(left);
-                        }
-                    }
-                }
-            }
-        }
-
-        // Check rows and columns within a block
-        for (auto check : block_checks) {
-            for (auto left : check.remains) {
-                //For every row of the block, count how many times left in that row only.
-                std::map<num_t, num_t> row_map;
-                std::map<num_t, num_t> col_map;
-                for (Cell &cell : check.cells) {
-                    if (cell.possible.find(left) != cell.possible.end()) {
-                        row_map[cell.row]++;
-                        col_map[cell.col]++;
-                    }
-                }
-
-                // Omission found when 2 or 3 of same left ONLY found in one row.
-                if (row_map.size() == 1 && row_map.begin()->second > 1) {
-                    num_t row_num = row_map.begin()->first;
-                    CellsCheck &row = row_checks[row_num];
-                    for (Cell &cell : row.cells) {
-                        if (cell.block != check.num) {
-                            cell.possible.erase(left);
-                        }
-                    }
-                }
-
-                // Omission found when 2 or 3 of same left ONLY found in one column.
-                if (col_map.size() == 1 && col_map.begin()->second > 1) {
-                    num_t row_num = col_map.begin()->first;
-                    CellsCheck &col = col_checks[row_num];
-                    for (Cell &cell : col.cells) {
-                        if (cell.block != check.num) {
-                            cell.possible.erase(left);
-                        }
-                    }
-                }
             }
         }
     }
@@ -491,115 +400,10 @@ public:
         );
     }
 
-    // Take a low possibilities cell and try them temporarily and check.
-    // Try one cell's possible values per call, one of the reamining MUST be valid.
-    // TODO: Rewrite this, & have global state save
-    bool try_and_check(num_t frame) {
-        sort_cells_left();
+    // Alias for is_valid
+    inline bool is_solved() { return is_valid(true); }
 
-        cout << "Called Try and Check : " << endl;
-        for (Cell &cell : cells_left) {
-            cell.print_details(cout) << endl;
-        }
-
-        // Itemize all possible changes and try one at a time.
-        std::deque<ChangeSet> all_possible;
-        for (Cell &cell : cells_left) {
-            if (cell.possible.size() > 1) {
-                cout << "Selecting this cell to try: " << endl;
-                cell.print_details(cout) << endl;
-                for (auto val : cell.possible) {
-                    all_possible.push_back(ChangeSet(cell, val));
-                }
-
-                break;
-            }
-        }
-
-        while (all_possible.size() != 0) {
-            std::vector<ChangeSet> changes;
-            changes.push_back(all_possible.front());
-            all_possible.pop_front();
-
-            cout << "Trying: " << changes.back() << endl;
-            for (Cell &cell : cells_left) {
-                cell.print_details(cout) << endl;
-            }
-
-            apply_changes(changes);
-            if (solve(true, frame + 1)) {
-                cout << "HIT SOLUTION" << endl;
-                return true;
-            } else {
-                cout << "REVERSING" << endl;
-                reverse_changes(changes);
-            }
-        }
-
-        return false;
-    }
-
-    // Returns true if was able to solve without issue.
-    // TODO: When trial is true, don't affect changes like removing from cells_left
-    bool solve(bool trial = false, num_t frame = 0) {
-        cout << "Called solve with history size: " << history.size() << endl;
-        std::vector<ChangeSet> changes_so_far;
-        num_t cnt = 0;
-
-        cout << "FRAME: " << frame << endl;
-        while (!is_solved()) {
-            cout << "Round : " << ++cnt << endl;
-            std::vector<ChangeSet> changes;
-
-            if (!is_valid()) {
-                cout << "Failed to validate: " << endl << *this << endl;
-                cout << *this << endl;
-                break;
-            }
-
-            // Mark down possible cells.
-            reduce_possible();
-            check_omissions();
-
-            // Visit cells left and determine possible changes, returned in vector
-            find_changes(changes);
-
-            // If deduced changes possible, make them
-            if (changes.size() != 0) {
-                for (auto change : changes) {
-                    changes_so_far.push_back(change);
-                    cout << change << endl;
-                }
-
-                // Affect the changes
-                apply_changes(changes);
-            } else {
-                cout << "Ran out of deductions... " << endl;
-                cout << *this << endl;
-
-                // Deductions have failed, pick a possible value of node and check solution. Only if still valid.
-                // return try_and_check(frame);
-                return false; // Temporarily until above fixed.
-            }
-        }
-
-        if (trial) {
-            reverse_changes(changes_so_far);
-        }
-
-        return is_solved();
-    }
-
-    /*
-     * Just a short hand now.
-     */
-    inline bool is_solved() {
-        return is_valid(true);
-    }
-
-    /*
-     * Check if a puzzle is valid or alternatively if it is solved.
-     */
+    // Check if a puzzle is valid or alternatively if it is solved.
     bool is_valid(bool also_solved = false) {
         for (auto &checks : {row_checks, col_checks, block_checks}) {
             for (auto &check : checks) {
@@ -642,43 +446,23 @@ public:
         return num;
     }
 
-    void print_details() {
+    // Print detailed breakdown of the Sudoku puzzle, including possibles.
+    std::ostream& print_details() {
         for (auto &row : cells) {
             for (auto &cell : row) {
                 cell.print_details(cout) << endl;
             }
             cout << line_break << endl;
         }
+
+        return cout;
     }
 
-    friend std::ostream & operator<<(std::ostream &os, const Sudoku &puzzle) {
-        for (auto cell_row : puzzle.cells) {
-            for (auto cell : cell_row) {
-                    os << cell << " ";
-            }
-            os << endl;
-        }
+    // Large and left outside.
+    void check_omissions();
+    bool try_and_check(num_t frame);
+    bool solve(num_t frame = 0);
 
-        return os;
-    }
-    friend std::istream & operator>>(std::istream &is, Sudoku &puzzle) {
-        char chr;
-        for (auto &cell_row : puzzle.cells) {
-            for (auto &cell : cell_row) {
-                do {
-                    is.get(chr);
-                } while (chr == '\n');
-                num_t val = int(chr) - int('0');
-                if (val != 0) {
-                    cell.set_value(val);
-                }
-            }
-        }
-        std::string line;
-        std::getline(is, line);
-
-        return is;
-    }
     bool operator==(const Sudoku &other) const {
         if (cells.size() != other.cells.size()) {
             return false;
@@ -698,6 +482,8 @@ public:
         return true;
     }
     bool operator!=(const Sudoku &other) const { return !(*this == other); }
+    friend std::ostream & operator<<(std::ostream &os, const Sudoku &puzzle);
+    friend std::istream & operator>>(std::istream &is, Sudoku &puzzle);
 
     // Data
     std::vector<ChangeSet> history;
@@ -707,6 +493,196 @@ public:
     cells_vec_t cells_left; // Cells that aren't solved with certainty.
     std::vector<std::vector<Cell> > cells;
 };
+
+// Strategy: Omission
+// Cross check between two different types of checkers, like row and block.
+// i.e. if 3 can only be in top 2 cells of top left block, eliminate 2 from all others in that block.
+// Ref: https://www.learn-sudoku.com/omission.html
+// Important: Run after reduce_possible
+void Sudoku::check_omissions() {
+    // Checks the row and columns against the blocks they intersect
+    std::vector<CellsCheck> all_checks = row_checks;
+    all_checks.insert(all_checks.end(), col_checks.begin(), col_checks.end());
+    for (auto check : all_checks) {
+        for (auto left : check.remains) {
+            //For every block of row or col, count how many times left in that row.
+            std::map<num_t, num_t> block_map;
+            for (Cell &cell : check.cells) {
+                if (cell.possible.find(left) != cell.possible.end()) {
+                    block_map[cell.block]++;
+                }
+            }
+
+            // Omission found when 2 or 3 of same left ONLY found in one block.
+            if (block_map.size() == 1 && block_map.begin()->second > 1) {
+                num_t block_num = block_map.begin()->first;
+                CellsCheck &block = block_checks[block_num];
+                // Erase from all cells that aren't the row.
+                for (Cell &cell : block.cells) {
+                    // If we are checking rows, eliminate those that aren't current row.
+                    // If we are checking cols, eliminate when not equal on the column
+                    if ((check.type == CheckType::Row && check.num != cell.row) ||
+                        (check.type == CheckType::Column && check.num != cell.col)) {
+                        cell.possible.erase(left);
+                    }
+                }
+            }
+        }
+    }
+
+    // Check rows and columns within a block
+    for (auto check : block_checks) {
+        for (auto left : check.remains) {
+            //For every row of the block, count how many times left in that row only.
+            std::map<num_t, num_t> row_map;
+            std::map<num_t, num_t> col_map;
+            for (Cell &cell : check.cells) {
+                if (cell.possible.find(left) != cell.possible.end()) {
+                    row_map[cell.row]++;
+                    col_map[cell.col]++;
+                }
+            }
+
+            // Omission found when 2 or 3 of same left ONLY found in one row.
+            if (row_map.size() == 1 && row_map.begin()->second > 1) {
+                num_t row_num = row_map.begin()->first;
+                CellsCheck &row = row_checks[row_num];
+                for (Cell &cell : row.cells) {
+                    if (cell.block != check.num) {
+                        cell.possible.erase(left);
+                    }
+                }
+            }
+
+            // Omission found when 2 or 3 of same left ONLY found in one column.
+            if (col_map.size() == 1 && col_map.begin()->second > 1) {
+                num_t row_num = col_map.begin()->first;
+                CellsCheck &col = col_checks[row_num];
+                for (Cell &cell : col.cells) {
+                    if (cell.block != check.num) {
+                        cell.possible.erase(left);
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Take a low possibilities cell and try them temporarily and check.
+// Try one cell's possible values per call, one of the reamining MUST be valid.
+bool Sudoku::try_and_check(num_t frame) {
+    cout << "Called Try and Check with frame: " << frame << endl;
+    sort_cells_left();
+
+    // Pick the first cell with the LEAST possible values to check.
+    // Assuming valid prior deductions, ONE MUST be valid part of solution.
+    std::deque<ChangeSet> possible_changes;
+    for (Cell &cell : cells_left) {
+        if (cell.possible.size() > 1) {
+            cout << "Selecting this cell to try: " << endl;
+            cell.print_details(cout) << endl;
+            for (auto val : cell.possible) {
+                possible_changes.push_back(ChangeSet(cell, val));
+            }
+
+            break;
+        }
+    }
+
+    Sudoku saved = *this; // Save state here, on failed trial restore.
+    while (possible_changes.size() != 0) {
+        std::vector<ChangeSet> changes;
+        changes.push_back(possible_changes.front());
+        possible_changes.pop_front();
+
+        cout << "Trying: " << changes.back() << endl;
+        apply_changes(changes);
+        if (solve(frame + 1)) {
+            cout << "HIT SOLUTION" << endl;
+            return true;
+        } else {
+            cout << "Restoring state...";
+            *this = saved; // Retore the state
+        }
+    }
+
+    return false;
+}
+
+// Returns true if was able to solve without issue.
+bool Sudoku::solve(num_t frame) {
+    cout << "SOLVE: Frame " << frame << " history size " << history.size() << endl;
+    std::vector<ChangeSet> changes_so_far;
+    num_t cnt = 0;
+
+    while (!is_solved()) {
+        cout << "Round : " << ++cnt << endl;
+        std::vector<ChangeSet> changes;
+
+        if (!is_valid()) {
+            cout << "Failed to validate: " << endl << *this << endl;
+            break;
+        }
+
+        // Mark down possible cells.
+        reduce_possible();
+        check_omissions();
+
+        // Visit cells left and determine possible changes, returned in vector
+        find_changes(changes);
+
+        // If deduced changes possible, make them
+        if (changes.size() != 0) {
+            for (auto change : changes) {
+                changes_so_far.push_back(change);
+                cout << change << endl;
+            }
+
+            // Affect the changes
+            apply_changes(changes);
+        } else {
+            cout << "Ran out of deductions... calling try_and_check" << endl;
+
+            // Deductions have failed, pick a possible value of node and check solution.
+            return try_and_check(frame);
+        }
+    }
+
+    return is_solved();
+}
+
+
+// Standard view of just cell values.
+std::ostream & operator<<(std::ostream &os, const Sudoku &puzzle) {
+    for (auto cell_row : puzzle.cells) {
+        for (auto cell : cell_row) {
+                os << cell << " ";
+        }
+        os << endl;
+    }
+
+    return os;
+}
+
+// Read in the values for the puzzle from input.
+std::istream & operator>>(std::istream &is, Sudoku &puzzle) {
+    char chr;
+    for (auto &cell_row : puzzle.cells) {
+        for (auto &cell : cell_row) {
+            do {
+                is.get(chr);
+            } while (chr == '\n');
+            num_t val = int(chr) - int('0');
+            if (val != 0) {
+                cell.set_value(val);
+            }
+        }
+    }
+    std::string line;
+    std::getline(is, line);
+
+    return is;
+}
 
 TEST(Euler096_Cell, Constructor) {
     Cell cell(7, 0, 5);
@@ -975,20 +951,6 @@ TEST(Euler096_CellsCheck, OutputOperator) {
     ASSERT_EQ(ss.str(), expect);
 }
 
-TEST(Euler096_CellsCheck, CellsCheckUnion) {
-    CellsCheck row_check;
-    row_check.remains = {3, 2, 6};
-    CellsCheck col_check;
-    col_check.remains = {9, 7, 8};
-    CellsCheck block_check;
-    block_check.remains = {1, 3, 9};
-
-    std::vector<num_t> result = cells_check_union(row_check, col_check, block_check);
-
-    std::vector<num_t> expect = { 1, 2, 3, 6, 7, 8, 9 };
-    ASSERT_EQ(result, expect);
-}
-
 TEST(Euler096_Sudoku, DefaultConstructor) {
     std::ifstream input(INPUT_SMALL, std::ifstream::in);
     Sudoku puzzle;
@@ -1076,12 +1038,13 @@ TEST(Euler096_Sudoku, CheckOmissions) {
     puzzle.cells[2][7].set_possible({2, 3, 8});
     puzzle.cells[2][8].set_possible({2, 3, 7});
 
-    puzzle.print_details();
+    ASSERT_EQ(puzzle.cells[1][0].possible.count(7), 1);
+    ASSERT_EQ(puzzle.cells[2][1].possible.count(7), 1);
     puzzle.init_checkers();
     puzzle.reduce_possible();
     puzzle.check_omissions();
-    puzzle.print_details();
-
+    ASSERT_EQ(puzzle.cells[1][0].possible.count(7), 0);
+    ASSERT_EQ(puzzle.cells[2][1].possible.count(7), 0);
 }
 
 TEST(Euler096_Sudoku, FindChanges) {
@@ -1268,5 +1231,6 @@ TEST(Euler096, FinalSolution) {
         cout << endl;
     } else {
         cout << "The sum of the top left cells of solved sudoku puzzles is: " << corner_sum << endl;
+        ASSERT_EQ(corner_sum, 24702);
     }
 }
