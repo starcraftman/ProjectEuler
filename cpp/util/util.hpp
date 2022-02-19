@@ -127,7 +127,7 @@ bool is_prime(T num) {
 
 // Determine if a number is pandigital
 template<class T>
-bool is_pandigital(T number) {
+bool is_pandigital(T number, bool zero_allowed = true) {
     std::vector<T> digits;
     std::set<T> no_dupes;
     while (number != 0) {
@@ -136,6 +136,10 @@ bool is_pandigital(T number) {
         no_dupes.insert(digit);
 
         number /= 10;
+    }
+
+    if (!zero_allowed && no_dupes.find(0) != no_dupes.end()) {
+        return false;
     }
 
     return digits.size() == no_dupes.size();
