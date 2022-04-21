@@ -82,7 +82,7 @@ BUILDS = {
         'check': 'lib/libgmp.a',
         'url': URL_GNUMP,
         'cmds': [
-            './configure --prefix=TARGET',
+            './configure --prefix=TARGET --disable-shared --with-pic',
             'make -jJOBS',
             'make install',
         ],
