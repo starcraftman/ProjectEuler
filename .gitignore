@@ -51,4 +51,5 @@ Thumbs.db
 **/*.cmake
 
 *.py
-**/*.exekk # All targets end exe
+**/*.exe # All targets end exe
+**/*.private
