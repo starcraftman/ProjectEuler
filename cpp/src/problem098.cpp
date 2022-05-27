@@ -127,25 +127,6 @@ std::string pattern_word(const std::string &word) {
 }
 
 
-/**
- * @brief The number of digits in a number
- *
- * @tparam T Any integer number class.
- * @param num The number to count digits of.
- * @return The number of digits.
- */
-template <class T>
-num_t num_digits(T num) {
-    num_t number = (num_t) num;
-    num_t cnt = 0;
-    while (number != 0) {
-        cnt++;
-        number /= 10;
-    };
-
-    return cnt;
-}
-
 class AnagramContainer {
 public:
     inline
@@ -162,24 +143,6 @@ public:
     std::map<std::string, std::vector<std::string> > group_by_hash;
     // pattern_word => list of patterned strings
     std::map<std::string, std::vector<std::string> > group_by_pattern;
-};
-
-class SquaresContainer {
-public:
-    inline
-    void add_square(num_t number);
-    void generate_below_length(num_t len);
-    void generate_range(num_t start, num_t end);
-    void save(const std::string &filename) const;
-    void load(const std::string &filename);
-    bool is_square(num_t number) const;
-    inline
-    std::vector<num_t> get_by_pattern(const std::string &pattern) const;
-
-    friend std::ostream & operator<<(std::ostream &os, const SquaresContainer &squares);
-
-    // Data
-    std::map<std::string, std::vector<num_t> > group_by_pattern;
 };
 
 /**
@@ -270,6 +233,24 @@ std::ostream & operator<<(std::ostream &os, const AnagramContainer &anagrams) {
 
     return os;
 }
+
+class SquaresContainer {
+public:
+    inline
+    void add_square(num_t number);
+    void generate_below_length(num_t len);
+    void generate_range(num_t start, num_t end);
+    void save(const std::string &filename) const;
+    void load(const std::string &filename);
+    bool is_square(num_t number) const;
+    inline
+    std::vector<num_t> get_by_pattern(const std::string &pattern) const;
+
+    friend std::ostream & operator<<(std::ostream &os, const SquaresContainer &squares);
+
+    // Data
+    std::map<std::string, std::vector<num_t> > group_by_pattern;
+};
 
 /**
  * @brief Add a single squared number to the container.
@@ -405,12 +386,25 @@ std::ostream & operator<<(std::ostream &os, const SquaresContainer &squares) {
 class Solution {
 public:
     explicit Solution(const SquaresContainer &squares) : squares(squares), best_square(0) {};
+    explicit Solution(const Solution &other) : squares(other.squares) {
+        if (this != &other) {
+            *this = other;
+        }
+    }
+    explicit Solution(Solution &&other) : squares(other.squares) {
+        if (this != &other) {
+            *this = std::move(other);
+        }
+    }
+
     void set_first(const std::string &word, num_t num);
     num_t set_word(const std::string &word);
     // Determine if a square anagram is present.
     // At least two anagrams must map to square numbers.
     inline
     num_t is_square_anagram();
+    Solution & operator=(Solution &&other);
+    Solution & operator=(const Solution &other);
 
     friend std::ostream & operator<<(std::ostream &os, const Solution &squares);
 
@@ -465,6 +459,38 @@ num_t Solution::is_square_anagram() {
     return 0;
 }
 
+Solution & Solution::operator=(const Solution &other) {
+    if (this == &other) {
+        return *this;
+    }
+
+    first_word = other.first_word;
+    best_square = other.best_square;
+    char_to_num.clear();
+    for (auto pair : other.char_to_num) {
+        char_to_num[pair.first] = pair.second;
+    }
+    word_nums.clear();
+    for (auto pair : other.word_nums) {
+        word_nums[pair.first] = pair.second;
+    }
+
+    return *this;
+}
+
+Solution & Solution::operator=(Solution &&other) {
+    if (this == &other) {
+        return *this;
+    }
+
+    std::swap(other.best_square, this->best_square);
+    std::swap(other.first_word, this->first_word);
+    std::swap(other.char_to_num, this->char_to_num);
+    std::swap(other.word_nums, this->word_nums);
+
+    return *this;
+}
+
 std::ostream & operator<<(std::ostream &os, const Solution &sol) {
     os << "Base Word: " << sol.first_word << endl;
     os << "Base Map: " << endl;
@@ -481,11 +507,11 @@ std::ostream & operator<<(std::ostream &os, const Solution &sol) {
 }
 
 num_t find_possible_square_pairs(const AnagramContainer &anagrams, const SquaresContainer &squares,
-        const std::string &hash_key) {
+        const std::string &hash_key, Solution &r_sol) {
     num_t best = 0;
     auto words = anagrams.get_by_hash(hash_key);
 
-    for (int i = 0; i < words.size(); ++i) {
+    for (std::size_t i = 0; i < words.size(); ++i) {
         std::string first = words.back();
         words.pop_back();
         const auto &squares_first = squares.get_by_pattern(pattern_word(first));
@@ -499,7 +525,7 @@ num_t find_possible_square_pairs(const AnagramContainer &anagrams, const Squares
 
             if (sol.is_square_anagram() && sol.is_square_anagram() > best) {
                 best = sol.is_square_anagram();
-                cout << sol << endl;
+                r_sol = sol;
             }
         }
 
@@ -514,7 +540,7 @@ num_t find_possible_square_pairs(const AnagramContainer &anagrams, const Squares
  *
  * @return The largest number that fit into an anagram pair.
  */
-num_t largest_square_number() {
+num_t largest_square_number(Solution &best_sol) {
     AnagramContainer anagrams;
     num_t max = anagrams.read_file(INPUT);
 
@@ -534,13 +560,15 @@ num_t largest_square_number() {
             continue;
         }
 
-        num_t best = find_possible_square_pairs(anagrams, squares, group.first);
+        Solution sol(squares);
+        num_t best = find_possible_square_pairs(anagrams, squares, group.first, sol);
         if (best != 0 && best > biggest_square) {
             biggest_square = best;
+            best_sol = sol;
         }
     }
 
-    return biggest_square;
+    return best_sol.is_square_anagram();
 }
 
 TEST(Euler098, HashNumber) {
@@ -561,10 +589,6 @@ TEST(Euler098, PatternWord) {
     ASSERT_EQ(pattern_word(std::string("1992")), expect);
     expect = "ABCCBDE";
     ASSERT_EQ(pattern_word(std::string("WILLING")), expect);
-}
-
-TEST(Euler098, NumDigits) {
-    ASSERT_EQ(num_digits(45432), 5);
 }
 
 TEST(Euler098, AnagramCreate) {
@@ -684,7 +708,37 @@ TEST(Euler098, SolutionOutputStream) {
     );
 }
 
-TEST(Euler098, FindMatchingPair) {
+TEST(Euler098, SolutionOperatorAssign) {
+    SquaresContainer squares;
+    squares.generate_range(1, 2000);
+    Solution sol(squares);
+    sol.set_first("POST", 1024);
+    sol.set_word("STOP");
+    Solution sol2(squares);
+    sol2.set_first("CARE", 4096);
+    sol2.set_word("RACE");
+
+    sol = sol2;
+    cout << sol << endl << sol2;
+}
+
+TEST(Euler098, SolutionOperatorMove) {
+    SquaresContainer squares;
+    squares.generate_range(1, 2000);
+    Solution sol(squares);
+    sol.set_first("POST", 1024);
+    sol.set_word("STOP");
+    Solution sol2(squares);
+    sol2.set_first("CARE", 4096);
+    sol2.set_word("RACE");
+
+    cout << sol << endl << sol2;
+    cout << "Move sol2 into sol" << endl;
+    sol = std::move(sol2);
+    cout << sol << endl << sol2;
+}
+
+TEST(Euler098, FindPossibleSquarePairs) {
     AnagramContainer anagrams;
     anagrams.add_word("POST");
     anagrams.add_word("STOP");
@@ -693,12 +747,16 @@ TEST(Euler098, FindMatchingPair) {
     SquaresContainer squares;
     squares.generate_below_length(4);
 
-    auto result = find_possible_square_pairs(anagrams, squares, hash_word("POST"));
+    Solution sol(squares);
+    auto result = find_possible_square_pairs(anagrams, squares, hash_word("POST"), sol);
     ASSERT_EQ(result, 9604);
 }
 
 TEST(Euler098, FinalAnswer) {
-    int result = largest_square_number();
-    cout << "The largest square anagram value is " << result << endl;
+    SquaresContainer squares;
+    Solution sol(squares);
+
+    auto result = largest_square_number(sol);
     ASSERT_EQ(result, 18769);
+    cout << sol << endl;
 }
